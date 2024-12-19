@@ -4,9 +4,14 @@ from sqlalchemy import Integer, Column, String, ForeignKey, Date
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base, mapped_column, Mapped, relationship
 
-engine = create_async_engine("sqlite:///api_library.db")
+from config import settings
 
-new_session = async_sessionmaker(engine, expire_on_commit=False)
+DATABASE_URL = settings.get_db_url()
+
+
+engine = create_async_engine(url=DATABASE_URL)
+
+async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 Base = declarative_base()
 
@@ -61,5 +66,9 @@ class Borrow(Base):
 async def create_tables():
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+
+async def delete_tables():
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.drop_all)
 
 
