@@ -1,15 +1,17 @@
 from datetime import date
 
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Annotated
+
+from sqlalchemy.orm import mapped_column, Mapped
 
 from main import app
 
-
+uniq_str_an = Annotated[str, mapped_column(unique=True)]
 
 class AuthorIn(BaseModel):
     first_name: str
-    last_name: str
+    last_name: Mapped[uniq_str_an]
     birth_date: date
 
 class AuthorOut(AuthorIn):
@@ -27,7 +29,7 @@ class BookOut(BookIn):
 
 class BorrowIn(BaseModel):
     book_id: int
-    borrower_name: str
+    borrower_name: Mapped[uniq_str_an]
     borrow_date: date
     return_date: date
 

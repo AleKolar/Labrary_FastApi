@@ -12,7 +12,7 @@ Base = declarative_base()
 
 class Author(Base):
     __tablename__ = 'author'
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     first_name: Mapped[str]
     last_name: Mapped[str]
     birth_date: Mapped[date]
@@ -22,7 +22,7 @@ class Author(Base):
 
 class Book(Base):
     __tablename__ = 'book'
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str]
     description: Mapped[str | None]
     author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
@@ -39,8 +39,8 @@ class Borrow(Base):
     borrow_date: Mapped[date]
     return_date: Mapped[date]
 
-    def to_dict(self):
-        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+    # def to_dict(self):
+    #     return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
 async def create_tables():
     async with engine.begin() as connection:
