@@ -2,7 +2,7 @@ from datetime import date
 
 from sqlalchemy import Integer, Column, String, ForeignKey, Date
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.orm import declarative_base, mapped_column, Mapped
+from sqlalchemy.orm import declarative_base, mapped_column, Mapped, relationship
 
 engine = create_async_engine("sqlite:///api_library.db")
 
@@ -20,6 +20,13 @@ class Author(Base):
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
+    book: Mapped["Book"] = relationship(
+        "Book",
+        back_populates="author",
+        uselist=False,
+        lazy="joined"
+    )
+
 class Book(Base):
     __tablename__ = 'book'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -31,6 +38,12 @@ class Book(Base):
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
+    author: Mapped["Author"] = relationship(
+        "Author",
+        back_populates="book",
+        uselist=False
+    )
+
 class Borrow(Base):
     __tablename__ = 'borrow'
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -39,8 +52,11 @@ class Borrow(Base):
     borrow_date: Mapped[date]
     return_date: Mapped[date]
 
-    # def to_dict(self):
-    #     return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+    book:  Mapped["Book"] = relationship("Book", back_populates="borrows")
+    author: Mapped["Author"] = relationship("Author", back_populates="borrows")
+
+    def to_dict(self):
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
 async def create_tables():
     async with engine.begin() as connection:
