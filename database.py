@@ -1,31 +1,28 @@
-from datetime import date
-
-from sqlalchemy import Integer, Column, String, ForeignKey, Date
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.orm import declarative_base, mapped_column, Mapped, relationship
+from sqlalchemy import create_async_engine, Column, Integer, String, Date, ForeignKey
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
 from config import settings
 
 DATABASE_URL = settings.get_db_url()
 
+engine = create_async_engine(DATABASE_URL)
 
-engine = create_async_engine(url=DATABASE_URL)
-
-async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+async_sessionmaker = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 Base = declarative_base()
 
 class Author(Base):
     __tablename__ = 'author'
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    first_name: Mapped[str]
-    last_name: Mapped[str]
-    birth_date: Mapped[date]
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    first_name = Column(String)
+    last_name = Column(String)
+    birth_date = Column(Date)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    book: Mapped["Book"] = relationship(
+    book = relationship(
         "Book",
         back_populates="author",
         uselist=False,
@@ -34,16 +31,16 @@ class Author(Base):
 
 class Book(Base):
     __tablename__ = 'book'
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    title: Mapped[str]
-    description: Mapped[str | None]
-    author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
-    available_copies: Mapped[int | None]
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String)
+    description = Column(String)
+    author_id = Column(Integer, ForeignKey('author.id'))
+    available_copies = Column(Integer)
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
-    author: Mapped["Author"] = relationship(
+    author = relationship(
         "Author",
         back_populates="book",
         uselist=False
@@ -51,14 +48,14 @@ class Book(Base):
 
 class Borrow(Base):
     __tablename__ = 'borrow'
-    id: Mapped[int] = mapped_column(primary_key=True)
-    book_id: Mapped[int] = mapped_column(ForeignKey('book.id'))
-    borrower_name: Mapped[str]
-    borrow_date: Mapped[date]
-    return_date: Mapped[date]
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    book_id = Column(Integer, ForeignKey('book.id'))
+    borrower_name = Column(String)
+    borrow_date = Column(Date)
+    return_date = Column(Date)
 
-    book:  Mapped["Book"] = relationship("Book", back_populates="borrows")
-    author: Mapped["Author"] = relationship("Author", back_populates="borrows")
+    book = relationship("Book", back_populates="borrows")
+    author = relationship("Author", back_populates="borrows")
 
     def to_dict(self):
         return {column.name: getattr(self, column.name) for column in self.__table__.columns}

@@ -5,7 +5,7 @@ from typing import List
 from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 
-from models import AuthorOut, AuthorIn, BookOut, BookIn, BorrowOut, BorrowIn
+from models import Author,Book,Borrow
 
 
 
@@ -14,25 +14,25 @@ app = FastAPI()
 # Эндпоинтs для авторов
 authors = []
 
-@app.post("/authors", response_model=AuthorOut)
-async def create_author(author: AuthorIn):
-    new_author = AuthorOut(id=len(authors) + 1, **author.dict())
+@app.post("/authors", response_model=Author)
+async def create_author(author: Author):
+    new_author = Author(**author.dict())
     authors.append(new_author)
     return new_author
 
-@app.get("/authors", response_model=List[AuthorOut])
+@app.get("/authors", response_model=List[Author])
 async def get_authors():
     return authors
 
-@app.get("/authors/{id}", response_model=AuthorOut)
+@app.get("/authors/{id}", response_model=Author)
 async def get_author_by_id(id: int):
     for author in authors:
         if author.id == id:
             return author
     return {"error": "Author not found"}
 
-@app.put("/authors/{id}", response_model=AuthorOut)
-async def update_author(id: int, author: AuthorIn):
+@app.put("/authors/{id}", response_model=Author)
+async def update_author(id: int, author: Author):
     for stored_author in authors:
         if stored_author.id == id:
             stored_author.first_name = author.first_name
@@ -41,7 +41,7 @@ async def update_author(id: int, author: AuthorIn):
             return stored_author
     return {"error": "Author not found"}
 
-@app.delete("/authors/{id}", response_model=AuthorOut)
+@app.delete("/authors/{id}", response_model=Author)
 async def delete_author(id: int):
     for index, author in enumerate(authors):
         if author.id == id:
@@ -54,25 +54,25 @@ async def delete_author(id: int):
 
 books = []
 
-@app.post("/books", response_model=BookOut)
-async def create_book(book: BookIn):
-    new_book = BookOut(id=len(books) + 1, **book.dict())
+@app.post("/books", response_model=Book)
+async def create_book(book: Book):
+    new_book = Book(id=len(books) + 1, **book.dict())
     books.append(new_book)
     return new_book
 
-@app.get("/books", response_model=List[BookOut])
+@app.get("/books", response_model=List[Book])
 async def get_books():
     return books
 
-@app.get("/books/{id}", response_model=BookOut)
+@app.get("/books/{id}", response_model=Book)
 async def get_book_by_id(id: int):
     for book in books:
         if book.id == id:
             return book
     return {"error": "Book not found"}
 
-@app.put("/books/{id}", response_model=BookOut)
-async def update_book(id: int, book: BookIn):
+@app.put("/books/{id}", response_model=Book)
+async def update_book(id: int, book: Book):
     for stored_book in books:
         if stored_book.id == id:
             stored_book.title = book.title
@@ -82,7 +82,7 @@ async def update_book(id: int, book: BookIn):
             return stored_book
     return {"error": "Book not found"}
 
-@app.delete("/books/{id}", response_model=BookOut)
+@app.delete("/books/{id}", response_model=Book)
 async def delete_book(id: int):
     for index, book in enumerate(books):
         if book.id == id:
@@ -95,24 +95,24 @@ async def delete_book(id: int):
 
 borrows = []
 
-@app.post("/borrows", response_model=BorrowOut)
-async def create_borrow(borrow: BorrowIn):
-    new_borrow = BorrowOut(id=len(borrows) + 1, **borrow.dict())
+@app.post("/borrows", response_model=Borrow)
+async def create_borrow(borrow: Borrow):
+    new_borrow = Borrow(id=len(borrows) + 1, **borrow.dict())
     borrows.append(new_borrow)
     return new_borrow
 
-@app.get("/borrows", response_model=List[BorrowOut])
+@app.get("/borrows", response_model=List[Borrow])
 async def get_borrows():
     return borrows
 
-@app.get("/borrows/{id}", response_model=BorrowOut)
+@app.get("/borrows/{id}", response_model=Borrow)
 async def get_borrow_by_id(id: int):
     for borrow in borrows:
         if borrow.id == id:
             return borrow
     return {"error": "Borrow not found"}
 
-@app.patch("/borrows/{id}/return", response_model=BorrowOut)
+@app.patch("/borrows/{id}/return", response_model=Borrow)
 async def return_borrow(id: int, return_date: date):
     for borrow in borrows:
         if borrow.id == id:

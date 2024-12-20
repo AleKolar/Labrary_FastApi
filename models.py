@@ -1,31 +1,36 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from datetime import date
 
 
-class AuthorIn(BaseModel):
+class Author(BaseModel):
+    id: int
     first_name: str
     last_name: str
     birth_date: date
 
-class AuthorOut(AuthorIn):
-    id: int
+class SchemaAuthor(Author):
+   id: int
+   model_config = ConfigDict(from_attributes=True)
 
-class BookIn(BaseModel):
+class Book(BaseModel):
+    id: int
     title: str
-    description: str
+    description: str | None
     author_id: int
-    available_copies: int
+    available_copies: int | None
 
-class BookOut(BookIn):
+class SchemaBook(Book):
+   id: int
+   model_config = ConfigDict(from_attributes=True)
+
+class Borrow(BaseModel):
     id: int
-
-class BorrowIn(BaseModel):
     book_id: int
     borrower_name: str
     borrow_date: date
     return_date: date
 
-class BorrowOut(BorrowIn):
-    id: int
-
+class SchemaBarrow(Borrow):
+   id: int
+   model_config = ConfigDict(from_attributes=True)
