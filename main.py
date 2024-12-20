@@ -2,93 +2,120 @@ from contextlib import asynccontextmanager
 from datetime import date
 from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.openapi.docs import get_swagger_ui_html
 
+from database import async_sessionmaker
 from models import Author,Book,Borrow
 
 
 
 app = FastAPI()
 
+async def get_async_db():
+    async_db = async_sessionmaker()
+    try:
+        yield async_db
+    finally:
+        await async_db.close()
+
 # Эндпоинтs для авторов
 authors = []
 
 @app.post("/authors", response_model=Author)
-async def create_author(author: Author):
-    new_author = Author(**author.dict())
-    authors.append(new_author)
-    return new_author
+async def create_author(author: Author, db = Depends(get_async_db)):
+    db_author = Author(**author.dict())
+    db.add(db_author)
+    db.commit()
+    db.refresh(db_author)
+    return db_author
 
 @app.get("/authors", response_model=List[Author])
-async def get_authors():
-    return authors
+async def get_authors(db = Depends(get_async_db)):
+    async with db() as session:
+        return authors
 
 @app.get("/authors/{id}", response_model=Author)
-async def get_author_by_id(id: int):
-    for author in authors:
-        if author.id == id:
-            return author
-    return {"error": "Author not found"}
+async def get_author_by_id(id: int, db = Depends(get_async_db)):
+    async with db() as session:
+        for author in authors:
+            if author.id == id:
+                return author
+        return {"error": "Author not found"}
 
 @app.put("/authors/{id}", response_model=Author)
-async def update_author(id: int, author: Author):
-    for stored_author in authors:
-        if stored_author.id == id:
-            stored_author.first_name = author.first_name
-            stored_author.last_name = author.last_name
-            stored_author.birth_date = author.birth_date
-            return stored_author
-    return {"error": "Author not found"}
+async def update_author(id: int, author: Author, db = Depends(get_async_db)):
+    async with db() as session:
+        for stored_author in authors:
+            if stored_author.id == id:
+                stored_author.first_name = author.first_name
+                stored_author.last_name = author.last_name
+                stored_author.birth_date = author.birth_date
+                return stored_author
+        return {"error": "Author not found"}
 
 @app.delete("/authors/{id}", response_model=Author)
-async def delete_author(id: int):
-    for index, author in enumerate(authors):
-        if author.id == id:
-            deleted_author = authors.pop(index)
-            return deleted_author
-    return {"error": "Author not found"}
+async def delete_author(id: int, db = Depends(get_async_db)):
+    async with db() as session:
+        for index, author in enumerate(authors):
+            if author.id == id:
+                deleted_author = authors.pop(index)
+                return deleted_author
+        return {"error": "Author not found"}
 
 
 # Эндпоинтs для книг
 
+# Эндпоинты для книг
 books = []
 
+async def get_async_db():
+    async_db = async_sessionmaker()
+    try:
+        yield async_db
+    finally:
+        await async_db.close()
+
 @app.post("/books", response_model=Book)
-async def create_book(book: Book):
-    new_book = Book(id=len(books) + 1, **book.dict())
-    books.append(new_book)
-    return new_book
+async def create_book(book: Book, db = Depends(get_async_db)):
+    async with db() as session:
+        new_book = Book(id=len(books) + 1, **book.dict())
+        books.append(new_book)
+        return new_book
 
 @app.get("/books", response_model=List[Book])
-async def get_books():
-    return books
+async def get_books(db = Depends(get_async_db)):
+    async with db() as session:
+        return books
 
 @app.get("/books/{id}", response_model=Book)
-async def get_book_by_id(id: int):
-    for book in books:
-        if book.id == id:
-            return book
-    return {"error": "Book not found"}
+async def get_book_by_id(id: int, db = Depends(get_async_db)):
+    async with db() as session:
+        for book in books:
+            if book.id == id:
+                return book
+        return {"error": "Book not found"}
 
 @app.put("/books/{id}", response_model=Book)
-async def update_book(id: int, book: Book):
-    for stored_book in books:
-        if stored_book.id == id:
-            stored_book.title = book.title
-            stored_book.description = book.description
-            stored_book.author_id = book.author_id
-            stored_book.available_copies = book.available_copies
-            return stored_book
-    return {"error": "Book not found"}
+async def update_book(id: int, book: Book, db = Depends(get_async_db)):
+    async with db() as session:
+        for stored_book in books:
+            if stored_book.id == id:
+                stored_book.title = book.title
+                stored_book.description = book.description
+                stored_book.author_id = book.author_id
+                stored_book.available_copies = book.available_copies
+                return stored_book
+        return {"error": "Book not found"}
 
 @app.delete("/books/{id}", response_model=Book)
-async def delete_book(id: int):
-    for index, book in enumerate(books):
-        if book.id == id:
-            deleted_book = books.pop(index)
-            return deleted_book
-    return {"error": "Book not found"}
+async def delete_book(id: int, db = Depends(get_async_db)):
+    async with db() as session:
+        for index, book in enumerate(books):
+            if book.id == id:
+                deleted_book = books.pop(index)
+                return deleted_book
+        return {"error": "Book not found"}
 
 
 # Эндпоинтs для выдач
@@ -96,29 +123,33 @@ async def delete_book(id: int):
 borrows = []
 
 @app.post("/borrows", response_model=Borrow)
-async def create_borrow(borrow: Borrow):
-    new_borrow = Borrow(id=len(borrows) + 1, **borrow.dict())
-    borrows.append(new_borrow)
-    return new_borrow
+async def create_borrow(borrow: Borrow, db = Depends(get_async_db)):
+    async with db() as session:
+        new_borrow = Borrow(id=len(borrows) + 1, **borrow.dict())
+        borrows.append(new_borrow)
+        return new_borrow
 
 @app.get("/borrows", response_model=List[Borrow])
-async def get_borrows():
-    return borrows
+async def get_borrows(db = Depends(get_async_db)):
+    async with db() as session:
+        return borrows
 
 @app.get("/borrows/{id}", response_model=Borrow)
-async def get_borrow_by_id(id: int):
-    for borrow in borrows:
-        if borrow.id == id:
-            return borrow
-    return {"error": "Borrow not found"}
+async def get_borrow_by_id(id: int, db = Depends(get_async_db)):
+    async with db() as session:
+        for borrow in borrows:
+            if borrow.id == id:
+                return borrow
+        return {"error": "Borrow not found"}
 
 @app.patch("/borrows/{id}/return", response_model=Borrow)
-async def return_borrow(id: int, return_date: date):
-    for borrow in borrows:
-        if borrow.id == id:
-            borrow.return_date = return_date
-            return borrow
-    return {"error": "Borrow not found"}
+async def return_borrow(id: int, return_date: date, db = Depends(get_async_db)):
+    async with db() as session:
+        for borrow in borrows:
+            if borrow.id == id:
+                borrow.return_date = return_date
+                return borrow
+        return {"error": "Borrow not found"}
 
 @app.get("/docs", include_in_schema=False)
 async def custom_swagger_ui_html():
@@ -129,7 +160,7 @@ async def get_open_api_endpoint():
     return app.openapi()
 
 
-# Эапуск FastAPI приложения
+# Запуск FastAPI приложения
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

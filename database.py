@@ -1,14 +1,17 @@
-from sqlalchemy import create_async_engine, Column, Integer, String, Date, ForeignKey
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
+
 from config import settings
+
 
 DATABASE_URL = settings.get_db_url()
 
 engine = create_async_engine(DATABASE_URL)
 
-async_sessionmaker = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+async_sessionmaker = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 Base = declarative_base()
 
