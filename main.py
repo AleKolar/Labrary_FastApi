@@ -24,49 +24,50 @@ authors = []
 
 @app.post("/authors", response_model=Author)
 async def create_author(author: Author, db = Depends(get_async_db)):
-    db_author = Author(**author.dict())
-    db.add(db_author)
-    db.commit()
-    db.refresh(db_author)
-    return db_author
+    async with async_sessionmaker() as session:
+        db_author = Author(**author.dict())
+        session.add(db_author)
+        await session.commit()
+        await session.refresh(db_author)
+        return db_author
 
 @app.get("/authors", response_model=List[Author])
 async def get_authors(db = Depends(get_async_db)):
-    async with db() as session:
+    async with async_sessionmaker() as session:
+        authors = session.query(Author).all()
         return authors
 
 @app.get("/authors/{id}", response_model=Author)
 async def get_author_by_id(id: int, db = Depends(get_async_db)):
     async with db() as session:
-        for author in authors:
-            if author.id == id:
-                return author
+        author = await session.get(Author, id)
+        if author:
+            return author
         return {"error": "Author not found"}
 
 @app.put("/authors/{id}", response_model=Author)
 async def update_author(id: int, author: Author, db = Depends(get_async_db)):
     async with db() as session:
-        for stored_author in authors:
-            if stored_author.id == id:
-                stored_author.first_name = author.first_name
-                stored_author.last_name = author.last_name
-                stored_author.birth_date = author.birth_date
-                return stored_author
+        stored_author = await session.get(Author, id)
+        if stored_author:
+            for key, value in author.dict().items():
+                setattr(stored_author, key, value)
+            await session.commit()
+            return stored_author
         return {"error": "Author not found"}
 
 @app.delete("/authors/{id}", response_model=Author)
 async def delete_author(id: int, db = Depends(get_async_db)):
     async with db() as session:
-        for index, author in enumerate(authors):
-            if author.id == id:
-                deleted_author = authors.pop(index)
-                return deleted_author
+        author = await session.get(Author, id)
+        if author:
+            session.delete(author)
+            await session.commit()
+            return author
         return {"error": "Author not found"}
 
-
-# Эндпоинтs для книг
-
 # Эндпоинты для книг
+
 books = []
 
 async def get_async_db():
