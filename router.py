@@ -15,17 +15,17 @@ app.include_router(router)
 
 @router.post("/", response_model=Author)
 async def create_author_route(author: Author):
-    author_id = await create_author(author.dict())
+    author_id = await AuthorRepository.create_author(author.dict())
     return {"author_id": author_id}
 
 @router.get("/authors", response_model=List[Author])
 async def get_authors_route():
-    authors = await get_authors()
+    authors = await AuthorRepository.get_authors()
     return authors
 
 @router.get("/authors/{id}", response_model=Author)
 async def get_author_by_id_route(id: int):
-    author = await get_author_by_id(id)
+    author = await AuthorRepository.get_author_by_id(id)
     if author:
         return author
     return {"error": "Author not found"}
