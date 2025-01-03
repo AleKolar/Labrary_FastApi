@@ -105,7 +105,11 @@ class BorrowRepository:
     @classmethod
     async def create_borrow(cls, borrow_data: dict) -> BorrowOrm:
         async with new_session() as session:
-            new_borrow = BorrowOrm(**borrow_data)
+            new_borrow = BorrowOrm(
+                borrower_name=borrow_data.get("borrower_name"),
+                author_id=borrow_data.get("author_id"),
+                book_id=borrow_data.get("book_id")
+            )
             session.add(new_borrow)
             await session.commit()
             return new_borrow

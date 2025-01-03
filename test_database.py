@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 import asyncio
@@ -39,8 +39,6 @@ async def test_create_book_with_author(book_data, new_db_session, author_data):
     author_orm = AuthorOrm(**author_data)
     author_id = await AuthorRepository.create_author(author_orm)
     assert author_id is not None
-
-    # Create a book, passing the author_id
     book_data["author_id"] = author_id
     try:
         book = await BookRepository.create_book(book_data, author_id)
@@ -63,13 +61,18 @@ async def test_get_authors(new_db_session):
 
 @pytest.mark.asyncio
 async def test_get_books(new_db_session):
-    new_db_session.return_value.execute.return_value.scalars.return_value.all.return_value = []
-    books = await BookRepository.get_books()
-    assert isinstance(books, list)
+    async with AsyncMock() as session:
+        mock_result = AsyncMock()
+        mock_result.scalars.return_value.all.return_value = []
+
+        session.execute = AsyncMock(return_value=mock_result)
+
+        books = await BookRepository.get_books()
+        assert isinstance(books, list)
 
 @pytest.mark.asyncio
 async def test_create_borrow(borrow_data, new_db_session):
-    borrow = await BorrowRepository.create_borrow(borrow_data["author_id"], borrow_data["book_id"])
+    borrow = await BorrowRepository.create_borrow(borrow_data)
     assert borrow is not None
 
 @pytest.mark.asyncio
