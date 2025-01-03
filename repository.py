@@ -54,9 +54,13 @@ class AuthorRepository:
 
 class BookRepository:
     @classmethod
-    async def create_book(cls, book_data: dict) -> int:
+    async def create_book(cls, book_data: dict, author_id: int = None) -> int:
         async with new_session() as session:
             new_book = BookOrm(**book_data)
+            if author_id is not None:
+                new_book.author_id = author_id
+            else:
+                raise ValueError("Author_id must be provided to create a book.")
             session.add(new_book)
             await session.flush()
             await session.commit()

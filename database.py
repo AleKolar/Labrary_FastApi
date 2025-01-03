@@ -52,6 +52,8 @@ class BookOrm(Base):
             'id': self.id,
             'title': self.title,
             'description': self.description,
+            'author_id': self.author_id,
+            'available_copies': self.available_copies,
         }
 
 class BorrowOrm(Base):
