@@ -5,46 +5,25 @@ from sqlalchemy import select
 
 from database import new_session, AuthorOrm, BookOrm, BorrowOrm
 
-import logging
-
-from models import Author, SchemaAuthor, Book
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
-file_handler = logging.FileHandler('app.log')
-file_handler.setLevel(logging.DEBUG)
-
-
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(file_handler)
+from models import Author, Book, SchemaBook
 
 
 class AuthorRepository:
     @classmethod
-    async def create_author(cls, data: Author) -> int:
+    async def create_author(cls, data: AuthorOrm) -> int:
         async with new_session() as session:
-            data = data.model_dump()
-            new_author = AuthorOrm(**data)
-            session.add(new_author)
+            session.add(data)
             await session.flush()
             await session.commit()
-            return new_author.id
+            return data.id
 
     @classmethod
     async def get_authors(cls) -> list[AuthorOrm]:
         async with new_session() as session:
             query = select(AuthorOrm)
             result = await session.execute(query)
-            result_models = result.scalars().all()
-            authors = [SchemaAuthor.model_validate(result_model) for result_model in result_models]
+            authors = result.scalars().all()
             return authors
-
 
     @classmethod
     async def get_author_by_id(cls, id: int) -> AuthorOrm:
@@ -64,7 +43,7 @@ class AuthorRepository:
             return None
 
     @classmethod
-    async def delete_author(id: int) -> AuthorOrm:
+    async def delete_author(cls, id: int) -> AuthorOrm:
         async with new_session() as session:
             author_to_delete = await session.get(AuthorOrm, id)
             if author_to_delete:
@@ -73,29 +52,26 @@ class AuthorRepository:
                 return author_to_delete
             return None
 
-
 class BookRepository:
     @classmethod
-    async def create_book(cls, book_data: Book) -> BookOrm:
+    async def create_book(cls, book_data: dict) -> int:
         async with new_session() as session:
-            data = book_data.model_dump()
-            new_book = BookOrm(**data)
+            new_book = BookOrm(**book_data)
             session.add(new_book)
             await session.flush()
             await session.commit()
-            return new_book
+            return new_book.id
 
     @classmethod
     async def get_books(cls) -> List[BookOrm]:
         async with new_session() as session:
-            query = session.query(BookOrm)
+            query = select(BookOrm)
             result = await session.execute(query)
-            result_models = result.scalars().all()
-            books = [SchemaAuthor.model_validate(result_model) for result_model in result_models]
+            books = result.scalars().all()
             return books
 
     @classmethod
-    async def get_book_by_id(id: int) -> BookOrm:
+    async def get_book_by_id(cls, id: int) -> BookOrm:
         async with new_session() as session:
             book = await session.get(BookOrm, id)
             return book
@@ -121,24 +97,21 @@ class BookRepository:
                 return book_to_delete
             return None
 
-
-
-
 class BorrowRepository:
     @classmethod
     async def create_borrow(cls, borrow_data: dict) -> BorrowOrm:
         async with new_session() as session:
             new_borrow = BorrowOrm(**borrow_data)
             session.add(new_borrow)
-            await session.flush()
             await session.commit()
             return new_borrow
 
     @classmethod
     async def get_borrows(cls) -> List[BorrowOrm]:
         async with new_session() as session:
-            query = session.query(BorrowOrm)
-            borrows = await query.gino.all()
+            query = select(BorrowOrm)
+            result = await session.execute(query)
+            borrows = result.scalars().all()
             return borrows
 
     @classmethod
@@ -147,6 +120,7 @@ class BorrowRepository:
             borrow = await session.get(BorrowOrm, id)
             return borrow
 
+    @classmethod
     async def return_borrow(cls, id: int, return_date: date) -> BorrowOrm:
         async with new_session() as session:
             borrow_to_return = await session.get(BorrowOrm, id)

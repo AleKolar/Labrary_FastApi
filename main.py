@@ -5,7 +5,7 @@ from typing import List, Dict
 from fastapi import FastAPI, Depends
 from fastapi.openapi.docs import get_swagger_ui_html
 
-from database import create_tables, delete_tables
+from database import create_tables, delete_tables, AuthorOrm
 from models import Author, Book, Borrow, SchemaAuthor
 from repository import AuthorRepository, BookRepository, BorrowRepository
 
@@ -25,18 +25,19 @@ app = FastAPI(lifespan=lifespan)
 # Эндпоинтs для авторов
 
 @app.post("/", response_model=Author)
-async def create_author(author: Author = Depends()):
-    author_id = await create_author(author.dict())
+async def create_author(author: Author) -> dict:
+    author_orm = AuthorOrm(**author.dict())
+    author_id = await AuthorRepository.create_author(author_orm)
     return {"author_id": author_id}
 
 @app.get("/authors", response_model=List[Author])
 async def get_authors():
-    authors = await get_authors()
+    authors = await AuthorRepository.get_authors()
     return authors
 
 @app.get("/authors/{id}", response_model=Author)
 async def get_author_by_id(id: int):
-    author = await get_author_by_id(id)
+    author = await AuthorRepository.get_author_by_id(id)
     if author:
         return author
     return {"error": "Author not found"}

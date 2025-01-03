@@ -3,9 +3,9 @@ from typing import List
 
 from fastapi import APIRouter
 from fastapi.openapi.docs import get_swagger_ui_html
-from sqlalchemy.orm.sync import update
 
-from main import create_author, get_author_by_id, get_authors, update_author_route, app
+
+from main import app
 from models import Book, Borrow, Author
 from repository import AuthorRepository, BookRepository
 

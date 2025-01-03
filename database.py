@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Annotated
 
 from sqlalchemy import ForeignKey, func
@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Mapped, relationship, mapped_column, declarative_base
 
 from config import settings
-from models import Author, Book
+from models import Author, Book, Borrow
 
 DATABASE_URL = settings.get_db_url()
 
@@ -16,57 +16,64 @@ new_session = async_sessionmaker(engine, expire_on_commit=False)
 
 Base = declarative_base()
 
-int_pk = Annotated[int, mapped_column(primary_key=True)]
-borrow_date = Annotated[datetime, mapped_column(server_default=func.now())]
-return_date = Annotated[datetime, mapped_column(server_default=func.now(), onupdate=datetime.now)]
 birth_date = Annotated[datetime, mapped_column(server_default=func.now())]
 
 class AuthorOrm(Base):
     __tablename__ = 'author'
-    id: Mapped[int_pk] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     first_name: Mapped[str]
     last_name: Mapped[str]
     birth_date: Mapped[birth_date]
 
-    def to_dict(self):
-        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+    book: Mapped["Book"] = relationship("BookOrm", back_populates="author")
+    borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="author", foreign_keys="[BorrowOrm.author_id]")
 
-    book: Mapped["Book"] = relationship(
-        "Book",
-        back_populates="author",
-        uselist=False,
-        lazy="joined"
-    )
+    def model_dump(self):
+        return {
+            'id': self.id,
+            'first_name': self.first_name,
+            'last_name': self.last_name
+        }
+
 
 class BookOrm(Base):
     __tablename__ = 'book'
-    id: Mapped[int_pk] = mapped_column(primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str]
     description: Mapped[str | None]
     available_copies: Mapped[int | None]
+    author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
 
-    def to_dict(self):
-        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+    borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="book")
+    author: Mapped["Author"] = relationship("AuthorOrm", back_populates="book")
 
-    author: Mapped["Author"] = relationship(
-        "Author",
-        back_populates="book",
-        uselist=False
-    )
+    def model_dump(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description,
+        }
 
 class BorrowOrm(Base):
     __tablename__ = 'borrow'
-    id: Mapped[int_pk] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     book_id: Mapped[int] = mapped_column(ForeignKey('book.id'))
+    author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
     borrower_name: Mapped[str]
-    borrow_date: Mapped[borrow_date]
-    return_date: Mapped[return_date]
+    borrow_date: Mapped[date]
+    return_date: Mapped[date]
 
-    book:  Mapped["Book"] = relationship("Book", back_populates="borrows")
-    author: Mapped["Author"] = relationship("Author", back_populates="borrows")
+    book: Mapped["BookOrm"] = relationship("BookOrm", back_populates="borrows")
+    author: Mapped["AuthorOrm"] = relationship("AuthorOrm", back_populates="borrows")
 
-    def to_dict(self):
-        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+    def model_dump(self):
+        return {
+            'id': self.id,
+            'book_id': self.book_id,
+            'borrower_name': self.borrower_name,
+            'borrow_date': self.borrow_date,
+            'return_date': self.return_date,
+        }
 
 async def create_tables():
     async with engine.begin() as connection:
