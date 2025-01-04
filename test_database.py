@@ -60,6 +60,22 @@ async def test_get_authors(new_db_session):
 
 
 @pytest.mark.asyncio
+async def test_delete_author(new_db_session, author_data):
+    author_orm = AuthorOrm(**author_data)
+    await AuthorRepository.create_author(author_orm)
+
+    authors_before_deletion = await AuthorRepository.get_authors()
+    author_id = authors_before_deletion[0].id
+
+    deleted_author = await AuthorRepository.delete_author(author_id)
+
+    assert deleted_author is not None
+
+    authors_after_deletion = await AuthorRepository.get_authors()
+    assert len(authors_after_deletion) == len(authors_before_deletion)
+    assert deleted_author not in authors_after_deletion
+
+@pytest.mark.asyncio
 async def test_get_books(new_db_session):
     async with AsyncMock() as session:
         mock_result = AsyncMock()
@@ -69,6 +85,21 @@ async def test_get_books(new_db_session):
 
         books = await BookRepository.get_books()
         assert isinstance(books, list)
+
+@pytest.mark.asyncio
+async def test_delete_book(new_db_session, book_data):
+    book_data["author_id"] = 1
+    book_id = await BookRepository.create_book(book_data, author_id=1)
+
+    books_before_deletion = await BookRepository.get_books()
+
+    deleted_book = await BookRepository.delete_book(book_id)
+
+    assert deleted_book is not None
+
+    books_after_deletion = await BookRepository.get_books()
+    assert len(books_after_deletion) == len(books_before_deletion)
+    assert deleted_book not in books_after_deletion
 
 @pytest.mark.asyncio
 async def test_create_borrow(borrow_data, new_db_session):
