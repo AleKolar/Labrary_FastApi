@@ -116,15 +116,6 @@ async def return_borrow_route(id: int, return_date: date):
         return returned_borrow
     return {"error": "Borrow not found"}
 
-# @router.get("/docs", include_in_schema=False)
-# async def custom_swagger_ui_html():
-#     return get_swagger_ui_html(openapi_url="/openapi.json", title="FastAPI Swagger UI")
-#
-# @router.get("/openapi.json", include_in_schema=False)
-# async def get_open_api_endpoint():
-#     return app.openapi()
-#
-#
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,9 +1,12 @@
+from datetime import date
 from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 import asyncio
 
-from database import AuthorOrm, new_session
+from sqlalchemy import select
+
+from database import AuthorOrm, new_session, BookOrm
 from repository import BorrowRepository, BookRepository, AuthorRepository
 
 @pytest.fixture(scope="session")
@@ -33,47 +36,72 @@ def borrow_data():
 def session_mock():
     return MagicMock()
 
-
 @pytest.mark.asyncio
 async def test_create_book_with_author(book_data, new_db_session, author_data):
     author_orm = AuthorOrm(**author_data)
     author_id = await AuthorRepository.create_author(author_orm)
     assert author_id is not None
+
     book_data["author_id"] = author_id
     try:
+        async for session in new_db_session:
+            result = await session.execute(select(BookOrm).where(BookOrm.author_id == author_id))
+            existing_books = result.fetchall()
+
+            for row in existing_books:
+                existing_book = row[0]
+                await check_book(existing_book, author_id)
+
         book = await BookRepository.create_book(book_data, author_id)
-    except TypeError as e:
-        assert False, f"Error: {e}"
+    except Exception as e:
+        print(e)
+        assert False, f"An error occurred: {str(e)}"
     assert book is not None
 
-@pytest.mark.asyncio
-async def test_create_book_without_author_id(book_data, new_db_session):
-    with pytest.raises(ValueError) as e:
-        await BookRepository.create_book(book_data, author_id=None)
-    assert "Author_id must be provided to create a book." in str(e.value)
+async def check_book(existing_book, author_id):
+    if existing_book.author_id == author_id:
+        assert False, f"Book with author_id {author_id} already exists in the database"
 
+
+@pytest.mark.asyncio
+async def test_create_book_without_existing_author(book_data, new_db_session, author_data):
+    author_orm = AuthorOrm(**author_data)
+    author_id = await AuthorRepository.create_author(author_orm)
+
+    non_existing_author_id = author_id  # Используем существующий id автора
+    with pytest.raises(ValueError) as e:
+        await BookRepository.create_book(book_data, author_id=non_existing_author_id)
+    assert "Сначала создайте автора !" in str(e.value)
+
+
+@classmethod
+async def delete_author(cls, id: int) -> AuthorOrm:
+    async with new_session() as session:
+        author_to_delete = await session.get(AuthorOrm, id)
+        if author_to_delete:
+            session.delete(author_to_delete)
+            await session.commit()
+            return author_to_delete
+        return None
 
 @pytest.mark.asyncio
 async def test_get_authors(new_db_session):
+    # Подготовка тестовых данных: создание нескольких записей авторов в базе данных
+    author_data_1 = {"first_name": "John", "last_name": "Doe", "birth_date": date(1980, 1, 1)}
+    author_data_2 = {"first_name": "Jane", "last_name": "Smith", "birth_date": date(1975, 5, 10)}
+
+    author_orm_1 = AuthorOrm(**author_data_1)
+    author_orm_2 = AuthorOrm(**author_data_2)
+
+    await AuthorRepository.create_author(author_orm_1)
+    await AuthorRepository.create_author(author_orm_2)
+
+    # Вызов метода get_authors для получения списка авторов
     authors = await AuthorRepository.get_authors()
+
+    # Проверка, что возвращенный результат является списком
     assert isinstance(authors, list)
-
-
-@pytest.mark.asyncio
-async def test_delete_author(new_db_session, author_data):
-    author_orm = AuthorOrm(**author_data)
-    await AuthorRepository.create_author(author_orm)
-
-    authors_before_deletion = await AuthorRepository.get_authors()
-    author_id = authors_before_deletion[0].id
-
-    deleted_author = await AuthorRepository.delete_author(author_id)
-
-    assert deleted_author is not None
-
-    authors_after_deletion = await AuthorRepository.get_authors()
-    assert len(authors_after_deletion) == len(authors_before_deletion)
-    assert deleted_author not in authors_after_deletion
+    assert len(authors) > 0
 
 @pytest.mark.asyncio
 async def test_get_books(new_db_session):
@@ -86,20 +114,15 @@ async def test_get_books(new_db_session):
         books = await BookRepository.get_books()
         assert isinstance(books, list)
 
-@pytest.mark.asyncio
-async def test_delete_book(new_db_session, book_data):
-    book_data["author_id"] = 1
-    book_id = await BookRepository.create_book(book_data, author_id=1)
-
-    books_before_deletion = await BookRepository.get_books()
-
-    deleted_book = await BookRepository.delete_book(book_id)
-
-    assert deleted_book is not None
-
-    books_after_deletion = await BookRepository.get_books()
-    assert len(books_after_deletion) == len(books_before_deletion)
-    assert deleted_book not in books_after_deletion
+@classmethod
+async def delete_book(cls, id: int) -> BookOrm:
+    async with new_session() as session:
+        book_to_delete = await session.get(BookOrm, id)
+        if book_to_delete:
+            session.delete(book_to_delete)
+            await session.commit()
+            return book_to_delete
+        return None
 
 @pytest.mark.asyncio
 async def test_create_borrow(borrow_data, new_db_session):

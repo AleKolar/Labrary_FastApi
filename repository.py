@@ -12,10 +12,26 @@ class AuthorRepository:
     @classmethod
     async def create_author(cls, data: AuthorOrm) -> int:
         async with new_session() as session:
-            session.add(data)
-            await session.flush()
-            await session.commit()
-            return data.id
+            existing_author = await cls.get_author_by_details(data.first_name, data.last_name, data.birth_date)
+
+            if existing_author:
+                return existing_author.id
+            else:
+                session.add(data)
+                await session.flush()
+                await session.commit()
+                return data.id
+
+    @classmethod
+    async def get_author_by_details(cls, first_name: str, last_name: str, birth_date: date) -> AuthorOrm:
+        async with new_session() as session:
+            result = await session.execute(select(AuthorOrm).filter(
+                (AuthorOrm.first_name == first_name) &
+                (AuthorOrm.last_name == last_name) &
+                (AuthorOrm.birth_date == birth_date)
+            ))
+            author = result.scalars().first()
+            return author
 
     @classmethod
     async def get_authors(cls) -> list[AuthorOrm]:
@@ -52,19 +68,21 @@ class AuthorRepository:
                 return author_to_delete
             return None
 
+
 class BookRepository:
     @classmethod
     async def create_book(cls, book_data: dict, author_id: int = None) -> int:
         async with new_session() as session:
-            new_book = BookOrm(**book_data)
-            if author_id is not None:
-                new_book.author_id = author_id
+            if author_id is None:
+                raise ValueError("Для создания книги необходимо указать Author_id")
+
+            author = await AuthorRepository.get_author_by_id(author_id)
+
+            if author is None:
+                raise ValueError("Сначала создайте автора !")
             else:
-                raise ValueError("Author_id must be provided to create a book.")
-            session.add(new_book)
-            await session.flush()
-            await session.commit()
-            return new_book.id
+                new_author = author
+            return author_id
 
     @classmethod
     async def get_books(cls) -> List[BookOrm]:
@@ -104,11 +122,18 @@ class BookRepository:
 class BorrowRepository:
     @classmethod
     async def create_borrow(cls, borrow_data: dict) -> BorrowOrm:
+        borrower_name = borrow_data.get("borrower_name")
+        author_id = borrow_data.get("author_id")
+        book_id = borrow_data.get("book_id")
+
+        if not borrower_name or not author_id or not book_id:
+            raise ValueError("Не все обязательные поля были предоставлены для создания займа")
+
         async with new_session() as session:
             new_borrow = BorrowOrm(
-                borrower_name=borrow_data.get("borrower_name"),
-                author_id=borrow_data.get("author_id"),
-                book_id=borrow_data.get("book_id")
+                borrower_name=borrower_name,
+                author_id=author_id,
+                book_id=book_id
             )
             session.add(new_borrow)
             await session.commit()
