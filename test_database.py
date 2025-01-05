@@ -37,6 +37,7 @@ def borrow_data():
 def session_mock():
     return MagicMock()
 
+
 @pytest.mark.asyncio
 async def test_create_book_with_author(book_data, new_db_session, author_data):
     if 'birth_date' not in author_data or author_data['birth_date'] is None:
@@ -51,23 +52,21 @@ async def test_create_book_with_author(book_data, new_db_session, author_data):
     assert author_id is not None
 
     book_data["author_id"] = author_id
-    try:
-        async for session in new_db_session:
-            result = await session.execute(select(BookOrm).where(BookOrm.author_id == author_id))
-            existing_books = result.fetchall()
 
-            for existing_book in existing_books:
-                await check_book(existing_book, author_id)
+    async for session in new_db_session:
+        result = await session.execute(select(BookOrm).where(BookOrm.author_id == author_id))
+        existing_books = result.fetchall()
+
+        for existing_book in existing_books:
+            await check_book(existing_book, author_id)
 
         book = await BookRepository.create_book(book_data, author_id)
-    except Exception as e:
-        print(e)
-        assert False, f"An error occurred: {str(e)}"
+
     assert book is not None
 
 async def check_book(existing_book, author_id):
-    if existing_book['author_id'] == author_id:
-        assert False, f"Book with author_id {author_id} already exists in the database"
+    if existing_book.author_id == author_id:
+        raise ValueError(f"Book with author_id {author_id} already exists in the database")
 
 
 @pytest.mark.asyncio

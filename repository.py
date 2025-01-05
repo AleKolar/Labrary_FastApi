@@ -80,9 +80,12 @@ class BookRepository:
 
             if author is None:
                 raise ValueError("Сначала создайте автора !")
-            else:
-                new_author = author
-            return author_id
+
+            book = BookOrm(**book_data, author_id=author_id)
+            session.add(book)
+            await session.commit()
+
+            return book.id
 
     @classmethod
     async def get_books(cls) -> List[BookOrm]:
