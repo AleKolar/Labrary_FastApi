@@ -23,7 +23,7 @@ class AuthorOrm(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     first_name: Mapped[str]
     last_name: Mapped[str]
-    birth_date: Mapped[birth_date]
+    birth_date: Mapped[datetime]
 
     book: Mapped["Book"] = relationship("BookOrm", back_populates="author")
     borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="author", foreign_keys="[BorrowOrm.author_id]")
@@ -32,7 +32,8 @@ class AuthorOrm(Base):
         return {
             'id': self.id,
             'first_name': self.first_name,
-            'last_name': self.last_name
+            'last_name': self.last_name,
+            'birth_date': self.birth_date.strftime('%Y-%m-%d') if self.birth_date else None
         }
 
 

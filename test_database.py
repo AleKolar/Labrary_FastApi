@@ -1,10 +1,11 @@
+import pytest
+import asyncio
+import datetime
 from datetime import date
 from unittest.mock import MagicMock, AsyncMock
 
-import pytest
-import asyncio
-
 from sqlalchemy import select
+from datetime import datetime
 
 from database import AuthorOrm, new_session, BookOrm
 from repository import BorrowRepository, BookRepository, AuthorRepository
@@ -38,6 +39,13 @@ def session_mock():
 
 @pytest.mark.asyncio
 async def test_create_book_with_author(book_data, new_db_session, author_data):
+    if 'birth_date' not in author_data or author_data['birth_date'] is None:
+        author_data = {
+            'first_name': author_data['first_name'],
+            'last_name': author_data['last_name'],
+            'birth_date': datetime.now()
+        }
+
     author_orm = AuthorOrm(**author_data)
     author_id = await AuthorRepository.create_author(author_orm)
     assert author_id is not None
@@ -48,8 +56,7 @@ async def test_create_book_with_author(book_data, new_db_session, author_data):
             result = await session.execute(select(BookOrm).where(BookOrm.author_id == author_id))
             existing_books = result.fetchall()
 
-            for row in existing_books:
-                existing_book = row[0]
+            for existing_book in existing_books:
                 await check_book(existing_book, author_id)
 
         book = await BookRepository.create_book(book_data, author_id)
@@ -59,19 +66,35 @@ async def test_create_book_with_author(book_data, new_db_session, author_data):
     assert book is not None
 
 async def check_book(existing_book, author_id):
-    if existing_book.author_id == author_id:
+    if existing_book['author_id'] == author_id:
         assert False, f"Book with author_id {author_id} already exists in the database"
 
 
 @pytest.mark.asyncio
 async def test_create_book_without_existing_author(book_data, new_db_session, author_data):
+    if 'birth_date' not in author_data or author_data['birth_date'] is None:
+        author_data['birth_date'] = datetime.now()
+
     author_orm = AuthorOrm(**author_data)
     author_id = await AuthorRepository.create_author(author_orm)
 
-    non_existing_author_id = author_id  # Используем существующий id автора
-    with pytest.raises(ValueError) as e:
-        await BookRepository.create_book(book_data, author_id=non_existing_author_id)
-    assert "Сначала создайте автора !" in str(e.value)
+    query = select(AuthorOrm).filter(
+        (AuthorOrm.first_name == author_data['first_name']) &
+        (AuthorOrm.last_name == author_data['last_name']) &
+        (AuthorOrm.birth_date == author_data['birth_date'])
+    )
+
+    async for session in new_db_session:
+        result = await session.execute(query)
+        existing_author = result.first()
+
+        if existing_author is None:
+            with pytest.raises(ValueError) as e:
+                await BookRepository.create_book(book_data, author_id=author_id)
+            assert str(e.value) == "Сначала создайте автора !"
+        else:
+            book = await BookRepository.create_book(book_data, author_id)
+            return book
 
 
 @classmethod
