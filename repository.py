@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import select
 
@@ -71,21 +71,43 @@ class AuthorRepository:
 
 class BookRepository:
     @classmethod
-    async def create_book(cls, book_data: dict, author_id: int = None) -> int:
+    async def create_book(cls, book_data: dict, author_data=None) -> int:
         async with new_session() as session:
-            if author_id is None:
-                raise ValueError("Для создания книги необходимо указать Author_id")
+            if 'author_data' not in book_data:
+                raise ValueError("Key 'author_data' is missing in book_data")
 
-            author = await AuthorRepository.get_author_by_id(author_id)
+            author_data = {
+                'first_name': book_data['author_data']['first_name'],
+                'last_name': book_data['author_data']['last_name'],
+                'birth_date': book_data['author_data']['birth_date']
+            }
 
-            if author is None:
-                raise ValueError("Сначала создайте автора !")
+            existing_author = await cls.get_existing_author(session, author_data)
 
-            book = BookOrm(**book_data, author_id=author_id)
+            if existing_author:
+                author_id = existing_author.id
+            else:
+                author_id = await AuthorRepository.create_author(AuthorOrm(**author_data))
+
+            book_data['author_id'] = author_id
+            del book_data['author_data']
+
+            book = BookOrm(**book_data)
             session.add(book)
             await session.commit()
 
             return book.id
+
+    @classmethod
+    async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
+        query = select(AuthorOrm).filter(
+            (AuthorOrm.first_name == author_data['first_name']) &
+            (AuthorOrm.last_name == author_data['last_name']) &
+            (AuthorOrm.birth_date == author_data['birth_date'])
+        )
+
+        result = await session.execute(query)
+        return result.first()
 
     @classmethod
     async def get_books(cls) -> List[BookOrm]:
@@ -121,6 +143,23 @@ class BookRepository:
                 await session.commit()
                 return book_to_delete
             return None
+
+    @classmethod
+    async def borrow_book(cls, book_id: int):
+        async with new_session() as session:
+            book = await session.get(BookOrm, book_id)
+            if book:
+                if book.available_copies > 0:
+                    book.available_copies -= 1
+                    await session.commit()
+
+    @classmethod
+    async def return_book(cls, book_id: int):
+        async with new_session() as session:
+            book = await session.get(BookOrm, book_id)
+            if book:
+                book.available_copies += 1
+                await session.commit()
 
 class BorrowRepository:
     @classmethod

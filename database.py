@@ -30,7 +30,6 @@ class AuthorOrm(Base):
 
     def model_dump(self):
         return {
-            'id': self.id,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'birth_date': self.birth_date.strftime('%Y-%m-%d') if self.birth_date else None
@@ -42,7 +41,7 @@ class BookOrm(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str]
     description: Mapped[str | None]
-    available_copies: Mapped[int | None]
+    available_copies: Mapped[int]
     author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
 
     borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="book")
@@ -50,10 +49,9 @@ class BookOrm(Base):
 
     def model_dump(self):
         return {
-            'id': self.id,
             'title': self.title,
             'description': self.description,
-            'author_id': self.author_id,
+            'author': self.author.model_dump(),
             'available_copies': self.available_copies,
         }
 
@@ -71,7 +69,6 @@ class BorrowOrm(Base):
 
     def model_dump(self):
         return {
-            'id': self.id,
             'book_id': self.book_id,
             'borrower_name': self.borrower_name,
             'borrow_date': self.borrow_date,

@@ -60,7 +60,7 @@ async def test_create_book_with_author(book_data, new_db_session, author_data):
         for existing_book in existing_books:
             await check_book(existing_book, author_id)
 
-        book = await BookRepository.create_book(book_data, author_id)
+        book = await BookRepository.create_book(book_data)
 
     assert book is not None
 
@@ -73,6 +73,12 @@ async def check_book(existing_book, author_id):
 async def test_create_book_without_existing_author(book_data, new_db_session, author_data):
     if 'birth_date' not in author_data or author_data['birth_date'] is None:
         author_data['birth_date'] = datetime.now()
+
+        author_data = {
+            'first_name': author_data['first_name'],
+            'last_name': author_data['last_name'],
+            'birth_date': datetime.now()
+        }
 
     author_orm = AuthorOrm(**author_data)
     author_id = await AuthorRepository.create_author(author_orm)
@@ -92,11 +98,11 @@ async def test_create_book_without_existing_author(book_data, new_db_session, au
                 await BookRepository.create_book(book_data, author_id=author_id)
             assert str(e.value) == "Сначала создайте автора !"
         else:
-            book = await BookRepository.create_book(book_data, author_id)
+            book = await BookRepository.create_book(book_data,)
             return book
 
 
-@classmethod
+@pytest.mark.asyncio
 async def delete_author(cls, id: int) -> AuthorOrm:
     async with new_session() as session:
         author_to_delete = await session.get(AuthorOrm, id)
@@ -136,7 +142,7 @@ async def test_get_books(new_db_session):
         books = await BookRepository.get_books()
         assert isinstance(books, list)
 
-@classmethod
+@pytest.mark.asyncio
 async def delete_book(cls, id: int) -> BookOrm:
     async with new_session() as session:
         book_to_delete = await session.get(BookOrm, id)

@@ -60,7 +60,9 @@ async def delete_author_route(id: int):
 
 @app.post("/books", response_model=Book)
 async def create_book_route(book: Book):
-    new_book = await BookRepository.create_book(book.dict())
+    book_data = book.dict()
+
+    new_book = await BookRepository.create_book(book_data)
     return new_book
 
 @app.get("/books", response_model=List[Book])

@@ -50,7 +50,8 @@ async def delete_author_route(id: int):
 
 @router.post("/books", response_model=Book)
 async def create_book_route(book: Book):
-    new_book = await BookRepository.create_book(book.dict())
+    new_book_data = await BookRepository.create_book(book.dict())
+    new_book = Book(**new_book_data)
     return new_book
 
 @router.get("/books", response_model=List[Book])
