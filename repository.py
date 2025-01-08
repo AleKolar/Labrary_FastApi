@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from typing import List, Optional
 
@@ -6,6 +7,7 @@ from sqlalchemy import select
 from database import new_session, AuthorOrm, BookOrm, BorrowOrm
 
 from models import Author, Book, SchemaBook, SchemaAuthor
+from utils import object_to_json
 
 
 class AuthorRepository:
@@ -69,9 +71,13 @@ class AuthorRepository:
             return None
 
 
+import json
+
+import json
+
 class BookRepository:
     @classmethod
-    async def create_book(cls, book_data: dict) -> int:
+    async def create_book(cls, book_data: dict) -> str:
         async with new_session() as session:
             if 'author' not in book_data or not book_data['author']:
                 raise ValueError("Key 'author' is missing or empty in book_data")
@@ -79,8 +85,7 @@ class BookRepository:
             author_data = {
                 'first_name': book_data['author']['first_name'],
                 'last_name': book_data['author']['last_name'],
-                'birth_date': book_data['author']['birth_date'],
-                'id': book_data['author']['id']
+                'birth_date': book_data['author']['birth_date']
             }
 
             existing_author = await cls.get_existing_author(session, author_data)
@@ -89,20 +94,23 @@ class BookRepository:
                 author_id = existing_author.id
             else:
                 author_id = await AuthorRepository.create_author(AuthorOrm(**author_data))
-                author_data['id'] = author_id
 
-            book_data['author_id'] = author_id
-            del book_data['author']
+            query = await session.execute(select(BookOrm).filter(BookOrm.title == book_data['title']))
+            existing_book = query.scalars().first()
 
-            book = BookOrm(**book_data)
-            session.add(book)
-            await session.commit()
+            if existing_book:
+                existing_book.available_copies += 1
+                await session.commit()
+                return object_to_json(existing_book)
+            else:
+                book_data['author_id'] = author_id
+                del book_data['author']
 
-            book.available_copies += 1
-            session.add(book)
-            await session.commit()
+                book = BookOrm(**book_data)
+                session.add(book)
+                await session.commit()
 
-            return book.id
+                return object_to_json(book)
 
     @classmethod
     async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
