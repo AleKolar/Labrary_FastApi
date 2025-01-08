@@ -79,7 +79,8 @@ class BookRepository:
             author_data = {
                 'first_name': book_data['author']['first_name'],
                 'last_name': book_data['author']['last_name'],
-                'birth_date': book_data['author']['birth_date']
+                'birth_date': book_data['author']['birth_date'],
+                'id': book_data['author']['id']
             }
 
             existing_author = await cls.get_existing_author(session, author_data)
@@ -102,6 +103,7 @@ class BookRepository:
             await session.commit()
 
             return book.id
+
     @classmethod
     async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
         query = select(AuthorOrm).filter(
@@ -109,9 +111,10 @@ class BookRepository:
             (AuthorOrm.last_name == author_data['last_name']) &
             (AuthorOrm.birth_date == author_data['birth_date'])
         )
-
         result = await session.execute(query)
-        return result.first()
+        author = result.scalars().first()
+        return author
+
 
     @classmethod
     async def get_books(cls) -> List[BookOrm]:
