@@ -93,9 +93,14 @@ class BookRepository:
             existing_book = query.scalars().first()
 
             if existing_book:
-                existing_book.available_copies += 1
-                await session.commit()
-                return object_to_json(existing_book)
+                existing_book_data = {
+                    'id': existing_book.id,
+                    'title': existing_book.title,
+                    'description': existing_book.description,
+                    'author_id': existing_book.author_id,
+                    'available_copies': existing_book.available_copies
+                }
+                return object_to_json(existing_book_data)
             else:
                 book_data['author_id'] = author_id
                 del book_data['author']
@@ -106,7 +111,14 @@ class BookRepository:
                 session.add(book)
                 await session.commit()
 
-                return object_to_json(book)
+                new_book_data = {
+                    'id': book.id,
+                    'title': book.title,
+                    'description': book.description,
+                    'author_id': book.author_id,
+                    'available_copies': book.available_copies
+                }
+                return object_to_json(new_book_data)
 
     @classmethod
     async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
