@@ -9,14 +9,13 @@ class Author(BaseModel):
     birth_date: date
 
 class SchemaAuthor(Author):
-   model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
 
 class Book(BaseModel):
     title: str
     author: SchemaAuthor
     description: str | None
     available_copies: int | None
-
 
 class SchemaBook(Book):
    id: int

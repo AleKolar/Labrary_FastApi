@@ -71,9 +71,7 @@ class AuthorRepository:
             return None
 
 
-import json
 
-import json
 
 class BookRepository:
     @classmethod
@@ -82,18 +80,14 @@ class BookRepository:
             if 'author' not in book_data or not book_data['author']:
                 raise ValueError("Key 'author' is missing or empty in book_data")
 
-            author_data = {
-                'first_name': book_data['author']['first_name'],
-                'last_name': book_data['author']['last_name'],
-                'birth_date': book_data['author']['birth_date']
-            }
+            author = SchemaAuthor(**book_data['author'])
 
-            existing_author = await cls.get_existing_author(session, author_data)
+            existing_author = await cls.get_existing_author(session, author.dict())
 
             if existing_author:
                 author_id = existing_author.id
             else:
-                author_id = await AuthorRepository.create_author(AuthorOrm(**author_data))
+                author_id = await AuthorRepository.create_author(AuthorOrm(**author.dict()))
 
             query = await session.execute(select(BookOrm).filter(BookOrm.title == book_data['title']))
             existing_book = query.scalars().first()
@@ -106,6 +100,8 @@ class BookRepository:
                 book_data['author_id'] = author_id
                 del book_data['author']
 
+                book_data['id'] = None
+                book_data['available_copies'] = 1
                 book = BookOrm(**book_data)
                 session.add(book)
                 await session.commit()
