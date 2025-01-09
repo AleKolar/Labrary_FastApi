@@ -6,7 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from database import create_tables, delete_tables, AuthorOrm
-from models import Author, Book, Borrow, SchemaAuthor, SchemaBook
+from models import Author, Book, Borrow, SchemaAuthor, SchemaBook, BookResponse
 from repository import AuthorRepository, BookRepository, BorrowRepository
 from utils import object_to_dict
 
@@ -68,7 +68,7 @@ async def delete_author(id: int):
 
 # Эндпоинты для книг
 
-@app.post("/books", response_model=SchemaBook)
+@app.post("/books", response_model=BookResponse)
 async def create_book(book: Book):
     book_data = book.dict()
     if 'author' not in book_data:

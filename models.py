@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from datetime import date
 
@@ -21,6 +21,9 @@ class Book(BaseModel):
 
 class SchemaBook(Book):
     model_config = ConfigDict(from_attributes=True)
+
+class BookResponse(BaseModel):
+    Book: Book
 
 class Borrow(BaseModel):
     book_id: int
