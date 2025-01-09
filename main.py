@@ -8,7 +8,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from database import create_tables, delete_tables, AuthorOrm
 from models import Author, Book, Borrow, SchemaAuthor, SchemaBook
 from repository import AuthorRepository, BookRepository, BorrowRepository
-from utils import object_to_json
+from utils import object_to_dict
 
 
 @asynccontextmanager
@@ -75,7 +75,7 @@ async def create_book(book: Book):
         raise ValueError("Key 'author' is missing in book_data")
 
     new_book = await BookRepository.create_book(book_data)
-    return object_to_json(new_book)
+    return object_to_dict(new_book)
 
 @app.get("/books", response_model=List[Book])
 async def get_books():

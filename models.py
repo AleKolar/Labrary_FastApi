@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 
 from datetime import date
@@ -14,12 +16,11 @@ class SchemaAuthor(Author):
 class Book(BaseModel):
     title: str
     author: SchemaAuthor
-    description: str | None
-    available_copies: int | None
+    description: Optional[str] = None
+    available_copies: Optional[int] = None
 
 class SchemaBook(Book):
-   id: int
-   model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
 
 class Borrow(BaseModel):
     book_id: int

@@ -6,8 +6,8 @@ from sqlalchemy import select
 
 from database import new_session, AuthorOrm, BookOrm, BorrowOrm
 
-from models import Author, Book, SchemaBook, SchemaAuthor
-from utils import object_to_json
+from models import SchemaAuthor
+from utils import object_to_dict
 
 
 class AuthorRepository:
@@ -93,14 +93,9 @@ class BookRepository:
             existing_book = query.scalars().first()
 
             if existing_book:
-                existing_book_data = {
-                    'id': existing_book.id,
-                    'title': existing_book.title,
-                    'description': existing_book.description,
-                    'author_id': existing_book.author_id,
-                    'available_copies': existing_book.available_copies
-                }
-                return object_to_json(existing_book_data)
+                existing_book.available_copies += 1
+                await session.commit()
+                return object_to_dict(existing_book)
             else:
                 book_data['author_id'] = author_id
                 del book_data['author']
@@ -111,14 +106,7 @@ class BookRepository:
                 session.add(book)
                 await session.commit()
 
-                new_book_data = {
-                    'id': book.id,
-                    'title': book.title,
-                    'description': book.description,
-                    'author_id': book.author_id,
-                    'available_copies': book.available_copies
-                }
-                return object_to_json(new_book_data)
+                return object_to_dict(book)
 
     @classmethod
     async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
