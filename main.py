@@ -74,7 +74,7 @@ async def create_book(book: Book):
         raise ValueError("Key 'author' is missing in book_data")
 
     new_book = await BookRepository.create_book(book_data)
-    new_book_json = object_to_json(new_book.dict())
+    new_book_json = object_to_json(new_book)
 
     return new_book_json
 
