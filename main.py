@@ -1,14 +1,13 @@
 from contextlib import asynccontextmanager
 from datetime import date
-from typing import List, Dict
+from typing import List
 
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi import FastAPI, HTTPException
 
 from database import create_tables, delete_tables, AuthorOrm
-from models import Author, Book, Borrow, SchemaAuthor, SchemaBook, BookResponse
+from models import Author, Book, Borrow, SchemaAuthor, SchemaBook
 from repository import AuthorRepository, BookRepository, BorrowRepository
-from utils import object_to_dict
+from utils import object_to_json
 
 
 @asynccontextmanager
@@ -68,14 +67,16 @@ async def delete_author(id: int):
 
 # Эндпоинты для книг
 
-@app.post("/books", response_model=BookResponse)
+@app.post("/books", response_model=SchemaBook)
 async def create_book(book: Book):
     book_data = book.dict()
     if 'author' not in book_data:
         raise ValueError("Key 'author' is missing in book_data")
 
     new_book = await BookRepository.create_book(book_data)
-    return object_to_dict(new_book)
+    new_book_json = object_to_json(new_book.dict())
+
+    return new_book_json
 
 @app.get("/books", response_model=List[Book])
 async def get_books():

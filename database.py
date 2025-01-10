@@ -36,6 +36,7 @@ class AuthorOrm(Base):
         }
 
 
+
 class BookOrm(Base):
     __tablename__ = 'book'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -53,6 +54,19 @@ class BookOrm(Base):
             'description': self.description,
             'author': self.author.model_dump(),
             'available_copies': self.available_copies,
+        }
+
+    def dict(self):
+        return {
+            'title': self.title,
+            'description': self.description,
+            'available_copies': self.available_copies,
+            'author': {
+                'id': self.author.id,
+                'first_name': self.author.first_name,
+                'last_name': self.author.last_name,
+                'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author.birth_date else None
+            }
         }
 
 class BorrowOrm(Base):

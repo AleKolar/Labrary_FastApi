@@ -22,8 +22,6 @@ class Book(BaseModel):
 class SchemaBook(Book):
     model_config = ConfigDict(from_attributes=True)
 
-class BookResponse(BaseModel):
-    Book: Book
 
 class Borrow(BaseModel):
     book_id: int
