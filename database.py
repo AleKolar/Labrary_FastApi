@@ -25,8 +25,8 @@ class AuthorOrm(Base):
     last_name: Mapped[str]
     birth_date: Mapped[datetime]
 
-    book: Mapped["Book"] = relationship("BookOrm", back_populates="author")
-    borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="author", foreign_keys="[BorrowOrm.author_id]")
+    book: Mapped["Book"] = relationship("BookOrm", back_populates="author", lazy='joined')
+    borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="author", foreign_keys="[BorrowOrm.author_id]", lazy='joined')
 
     def model_dump(self):
         return {
@@ -45,8 +45,8 @@ class BookOrm(Base):
     available_copies: Mapped[int]
     author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
 
-    borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="book")
-    author: Mapped["Author"] = relationship("AuthorOrm", back_populates="book")
+    borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="book", foreign_keys="[BorrowOrm.book_id]", lazy='joined')
+    author: Mapped["Author"] = relationship("AuthorOrm", back_populates="book", lazy='joined')
 
     def model_dump(self):
         return {
@@ -69,6 +69,19 @@ class BookOrm(Base):
             }
         }
 
+    def json(self):
+        return {
+            'title': self.title,
+            'description': self.description,
+            'author': {
+                'id': self.author.id,
+                'first_name': self.author.first_name,
+                'last_name': self.author.last_name,
+                'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author.birth_date else None
+            },
+            'available_copies': self.available_copies
+        }
+
 class BorrowOrm(Base):
     __tablename__ = 'borrow'
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -78,8 +91,8 @@ class BorrowOrm(Base):
     borrow_date: Mapped[date]
     return_date: Mapped[date]
 
-    book: Mapped["BookOrm"] = relationship("BookOrm", back_populates="borrows")
-    author: Mapped["AuthorOrm"] = relationship("AuthorOrm", back_populates="borrows")
+    book: Mapped["BookOrm"] = relationship("BookOrm", back_populates="borrows", lazy='joined')
+    author: Mapped["AuthorOrm"] = relationship("AuthorOrm", back_populates="borrows", lazy='joined')
 
     def model_dump(self):
         return {

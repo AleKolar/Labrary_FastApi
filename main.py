@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from database import create_tables, delete_tables, AuthorOrm
 from models import Author, Book, Borrow, SchemaAuthor, SchemaBook
 from repository import AuthorRepository, BookRepository, BorrowRepository
-from utils import object_to_json
+from utils import object_to_dict
 
 
 @asynccontextmanager
@@ -74,30 +74,28 @@ async def create_book(book: Book):
         raise ValueError("Key 'author' is missing in book_data")
 
     new_book = await BookRepository.create_book(book_data)
-    new_book_json = object_to_json(new_book)
+    return {"message": "Книга успешно добавлена в библиотеку!", "book": new_book}
 
-    return new_book_json
-
-@app.get("/books", response_model=List[Book])
+@app.get("/books", response_model=List[SchemaBook])
 async def get_books():
     books = await BookRepository.get_books()
     return books
 
-@app.get("/books/{id}", response_model=Book)
+@app.get("/books/{id}", response_model=SchemaBook)
 async def get_book_by_id(id: int):
     book = await BookRepository.get_book_by_id(id)
     if book:
         return book
     return {"error": "Book not found"}
 
-@app.put("/books/{id}", response_model=Book)
+@app.put("/books/{id}", response_model=SchemaBook)
 async def update_book(id: int, book: Book):
     updated_book = await BookRepository.update_book(id, book.dict())
     if updated_book:
         return updated_book
     return {"error": "Book not found"}
 
-@app.delete("/books/{id}", response_model=Book)
+@app.delete("/books/{id}", response_model=SchemaBook)
 async def delete_book(id: int):
     deleted_book = await BookRepository.delete_book(id)
     if deleted_book:
