@@ -1,3 +1,5 @@
+import json
+
 from models import Book, SchemaAuthor
 
 
@@ -15,3 +17,4 @@ def dict_to_object(obj_dict, obj_class):
             obj_dict['author'] = dict_to_object(obj_dict['author'], SchemaAuthor)
         return obj_class(**obj_dict)
     return obj_class(**obj_dict)
+

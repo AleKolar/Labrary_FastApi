@@ -1,4 +1,4 @@
-import json
+
 from datetime import date
 from typing import List, Optional
 
@@ -6,31 +6,33 @@ from sqlalchemy import select
 
 from database import new_session, AuthorOrm, BookOrm, BorrowOrm
 
-from models import SchemaAuthor
-from utils import object_to_dict
+from models import SchemaAuthor, Book, Author
+
 
 
 class AuthorRepository:
     @classmethod
-    async def create_author(cls, data: AuthorOrm) -> int:
+    async def create_author(cls, data: Author):
         async with new_session() as session:
-            existing_author = await cls.get_author_by_details(data.first_name, data.last_name, data.birth_date)
+            model = data.model_dump()
+            existing_author = await cls.get_author_by_details(data=AuthorOrm(**model))
 
             if existing_author:
-                return existing_author.id
+                return existing_author
             else:
-                session.add(data)
+                new_model = AuthorOrm(**model)
+                session.add(new_model)
                 await session.flush()
                 await session.commit()
-                return data.id
+                return new_model
 
     @classmethod
-    async def get_author_by_details(cls, first_name: str, last_name: str, birth_date: date) -> AuthorOrm:
+    async def get_author_by_details(cls, data: AuthorOrm):
         async with new_session() as session:
             result = await session.execute(select(AuthorOrm).filter(
-                (AuthorOrm.first_name == first_name) &
-                (AuthorOrm.last_name == last_name) &
-                (AuthorOrm.birth_date == birth_date)
+                (data.first_name == AuthorOrm.first_name) &
+                (data.last_name == AuthorOrm.last_name) &
+                (data.birth_date == AuthorOrm.birth_date)
             ))
             author = result.scalars().first()
             return author
@@ -71,49 +73,54 @@ class AuthorRepository:
             return None
 
 
-
-
 class BookRepository:
     @classmethod
-    async def create_book(cls, book_data: dict) -> str:
+    async def create_book(cls, book_data: Book):
         async with new_session() as session:
-            if 'author' not in book_data or not book_data['author']:
-                raise ValueError("Key 'author' is missing or empty in book_data")
+            data = book_data.model_dump()
+            author_data = data['author']
 
-            author = SchemaAuthor(**book_data['author'])
-
-            existing_author = await cls.get_existing_author(session, author.dict())
+            existing_author = await cls.get_existing_author(session, {'first_name': author_data['first_name'],
+                                                                      'last_name': author_data['last_name'],
+                                                                      'birth_date': author_data['birth_date']})
 
             if existing_author:
                 author_id = existing_author.id
             else:
-                author_id = await AuthorRepository.create_author(AuthorOrm(**author.dict()))
+                new_author = AuthorOrm(**author_data)
+                session.add(new_author)
+                await session.flush()
+                author_id = new_author.id
 
-            query = await session.execute(select(BookOrm).filter(BookOrm.title == book_data['title']))
+            query = await session.execute(select(BookOrm).filter(BookOrm.title == data['title']))
             existing_book = query.scalars().first()
 
             if existing_book:
                 existing_book.available_copies += 1
                 await session.commit()
-                return object_to_dict(existing_book)
+                return existing_book
             else:
-                book_data['author_id'] = author_id
-                del book_data['author']
+                new_book_data = data.copy()
+                new_book_data['available_copies'] = 1
 
-                book_data['id'] = None
-                book_data['available_copies'] = 1
-                book = BookOrm(**book_data)
-                session.add(book)
+                new_book = BookOrm(title=new_book_data['title'],
+                                   description=new_book_data['description'],
+                                   available_copies=new_book_data['available_copies'],
+                                   author_id=author_id)
+
+                session.add(new_book)
+                await session.flush()
                 await session.commit()
 
-                return object_to_dict(book)
+                return new_book
+
 
     @classmethod
     async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
         query = select(AuthorOrm).filter(
-            (AuthorOrm.first_name == author_data['first_name']) &
-            (AuthorOrm.last_name == author_data['last_name']) &
-            (AuthorOrm.birth_date == author_data['birth_date'])
+            (AuthorOrm.first_name == author_data.get('first_name')) &
+            (AuthorOrm.last_name == author_data.get('last_name')) &
+            (AuthorOrm.birth_date == author_data.get('birth_date'))
         )
         result = await session.execute(query)
         author = result.scalars().first()
@@ -138,20 +145,13 @@ class BookRepository:
     async def update_book(cls, id: int, book_data: dict) -> BookOrm:
         async with new_session() as session:
             stored_book = await session.get(BookOrm, id)
-            if isinstance(stored_book, BookOrm):
+
+            if stored_book:
                 for key, value in book_data.items():
-                    if key == 'author':
-                        author_data = value
-                        author_id = author_data.get('id')
-                        del author_data['id']
-                        author = await session.get(AuthorOrm, author_id)
-                        if author:
-                            for author_key, author_value in author_data.items():
-                                setattr(author, author_key, author_value)
-                            stored_book.author = author  # Устанавливаем нового автора книги
-                    else:
-                        setattr(stored_book, key, value)
+                    setattr(stored_book, key, value)
+
                 await session.commit()
+
                 return stored_book
             return None
 

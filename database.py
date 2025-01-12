@@ -3,7 +3,7 @@ from typing import Annotated
 
 from sqlalchemy import ForeignKey, func
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.orm import Mapped, relationship, mapped_column, declarative_base
+from sqlalchemy.orm import Mapped, relationship, mapped_column, declarative_base, DeclarativeBase
 
 from config import settings
 from models import Author, Book, Borrow
@@ -14,11 +14,12 @@ engine = create_async_engine(url=DATABASE_URL)
 
 new_session = async_sessionmaker(engine, expire_on_commit=False)
 
-Base = declarative_base()
+class Model(DeclarativeBase):
+   pass
 
 birth_date = Annotated[datetime, mapped_column(server_default=func.now())]
 
-class AuthorOrm(Base):
+class AuthorOrm(Model):
     __tablename__ = 'author'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     first_name: Mapped[str]
@@ -37,7 +38,7 @@ class AuthorOrm(Base):
 
 
 
-class BookOrm(Base):
+class BookOrm(Model):
     __tablename__ = 'book'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str]
@@ -46,7 +47,7 @@ class BookOrm(Base):
     author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
 
     borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="book", foreign_keys="[BorrowOrm.book_id]", lazy='joined')
-    author: Mapped["Author"] = relationship("AuthorOrm", back_populates="book", lazy='joined')
+    author: Mapped["AuthorOrm"] = relationship("AuthorOrm", back_populates="book", lazy='joined')
 
     def model_dump(self):
         return {
@@ -62,27 +63,14 @@ class BookOrm(Base):
             'description': self.description,
             'available_copies': self.available_copies,
             'author': {
-                'id': self.author.id,
                 'first_name': self.author.first_name,
                 'last_name': self.author.last_name,
                 'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author.birth_date else None
             }
         }
 
-    def json(self):
-        return {
-            'title': self.title,
-            'description': self.description,
-            'author': {
-                'id': self.author.id,
-                'first_name': self.author.first_name,
-                'last_name': self.author.last_name,
-                'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author.birth_date else None
-            },
-            'available_copies': self.available_copies
-        }
 
-class BorrowOrm(Base):
+class BorrowOrm(Model):
     __tablename__ = 'borrow'
     id: Mapped[int] = mapped_column(primary_key=True)
     book_id: Mapped[int] = mapped_column(ForeignKey('book.id'))
@@ -104,11 +92,11 @@ class BorrowOrm(Base):
 
 async def create_tables():
     async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+        await connection.run_sync(Model.metadata.create_all)
 
 async def delete_tables():
     async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.drop_all)
+        await connection.run_sync(Model.metadata.drop_all)
 
 
 

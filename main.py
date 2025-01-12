@@ -3,52 +3,48 @@ from datetime import date
 from typing import List
 
 from fastapi import FastAPI, HTTPException
+from fastapi.params import Depends
 
-from database import create_tables, delete_tables, AuthorOrm
+from database import create_tables, delete_tables, AuthorOrm, BookOrm
 from models import Author, Book, Borrow, SchemaAuthor, SchemaBook
 from repository import AuthorRepository, BookRepository, BorrowRepository
-from utils import object_to_dict
+
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-   await create_tables()
-   print("База готова")
-   yield
-   await delete_tables()
-   print("База очищена")
+    await create_tables()
+    print("База готова")
+    yield
+    await delete_tables()
+    print("База очищена")
+
 
 app = FastAPI(lifespan=lifespan)
 
 
 # Эндпоинтs для авторов
 
-@app.post("/", response_model=SchemaAuthor)
-async def create_author(author: Author) -> dict:
-    author_orm = AuthorOrm(**author.dict())
-    author_id = await AuthorRepository.create_author(author_orm)
+@app.post("/")
+async def create_author(author: Author = Depends()):
+    author_repository = AuthorRepository()
+    created_author = await author_repository.create_author(author)
+    return {"message": "Автор успешно добавлен в библиотеку!", "author": created_author}
 
-    # Construct the response data including first_name, last_name, birth_date, and author_id
-    author_data = {
-        "first_name": author.first_name,
-        "last_name": author.last_name,
-        "birth_date": author.birth_date,
-        "id": author_id
-    }
-
-    return author_data
 
 @app.get("/authors", response_model=List[Author])
 async def get_authors():
     authors = await AuthorRepository.get_authors()
     return authors
 
+
 @app.get("/authors/{id}", response_model=Author)
-async def get_author_by_id(id: int):
-    author = await AuthorRepository.get_author_by_id(id)
+async def get_author_by_id(author_id: int):
+    author = await AuthorRepository.get_author_by_id(author_id)
     if author:
         return author
     return {"error": "Author not found"}
+
 
 @app.put("/authors/{id}", response_model=Author)
 async def update_author(id: int, author: Author):
@@ -56,6 +52,7 @@ async def update_author(id: int, author: Author):
     if updated_author:
         return updated_author
     return {"error": "Author not found"}
+
 
 @app.delete("/authors/{id}", response_model=SchemaAuthor)
 async def delete_author(id: int):
@@ -65,21 +62,22 @@ async def delete_author(id: int):
     else:
         raise HTTPException(status_code=404, detail="Author not found")
 
+
 # Эндпоинты для книг
 
-@app.post("/books", response_model=SchemaBook)
-async def create_book(book: Book):
-    book_data = book.dict()
-    if 'author' not in book_data:
-        raise ValueError("Key 'author' is missing in book_data")
+@app.post("/book")
+async def create_book(book_data: Book = Depends()):
+    book = Book(**book_data.model_dump())
+    book_repository = BookRepository()
+    created_book = await book_repository.create_book(book)
+    return {"message": "Книга успешно добавлена в библиотеку!", "book": created_book}
 
-    new_book = await BookRepository.create_book(book_data)
-    return {"message": "Книга успешно добавлена в библиотеку!", "book": new_book}
 
-@app.get("/books", response_model=List[SchemaBook])
+@app.get("/books", response_model=List[Book])
 async def get_books():
     books = await BookRepository.get_books()
     return books
+
 
 @app.get("/books/{id}", response_model=SchemaBook)
 async def get_book_by_id(id: int):
@@ -88,12 +86,14 @@ async def get_book_by_id(id: int):
         return book
     return {"error": "Book not found"}
 
+
 @app.put("/books/{id}", response_model=SchemaBook)
 async def update_book(id: int, book: Book):
     updated_book = await BookRepository.update_book(id, book.dict())
     if updated_book:
         return updated_book
     return {"error": "Book not found"}
+
 
 @app.delete("/books/{id}", response_model=SchemaBook)
 async def delete_book(id: int):
@@ -110,10 +110,12 @@ async def create_borrow(borrow: Borrow):
     new_borrow = await BorrowRepository.create_borrow(borrow.dict())
     return new_borrow
 
+
 @app.get("/borrows", response_model=List[Borrow])
 async def get_borrows():
     borrows = await BorrowRepository.get_borrows()
     return borrows
+
 
 @app.get("/borrows/{id}", response_model=Borrow)
 async def get_borrow_by_id(id: int):
@@ -122,6 +124,7 @@ async def get_borrow_by_id(id: int):
         return borrow
     return {"error": "Borrow not found"}
 
+
 @app.patch("/borrows/{id}/return", response_model=Borrow)
 async def return_borrow(id: int, return_date: date):
     returned_borrow = await BorrowRepository.return_borrow(id, return_date)
@@ -129,7 +132,8 @@ async def return_borrow(id: int, return_date: date):
         return returned_borrow
     return {"error": "Borrow not found"}
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 
+    uvicorn.run(app, host="0.0.0.0", port=8000)
