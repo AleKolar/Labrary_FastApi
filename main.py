@@ -88,8 +88,8 @@ async def get_book_by_id(id: int):
 
 
 @app.put("/books/{id}", response_model=SchemaBook)
-async def update_book(id: int, book: Book):
-    updated_book = await BookRepository.update_book(id, book.dict())
+async def update_book(id: int, book: BookOrm = Depends()):
+    updated_book = await BookRepository.update_book(id, book.model_dump())
     if updated_book:
         return updated_book
     return {"error": "Book not found"}

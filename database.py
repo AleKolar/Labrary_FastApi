@@ -53,7 +53,7 @@ class BookOrm(Model):
         return {
             'title': self.title,
             'description': self.description,
-            'author': self.author.model_dump(),
+            'author': self.author_id,
             'available_copies': self.available_copies,
         }
 
