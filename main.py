@@ -107,7 +107,7 @@ async def delete_book(id: int):
 
 @app.post("/borrows", response_model=Borrow)
 async def create_borrow(borrow: Borrow):
-    new_borrow = await BorrowRepository.create_borrow(borrow.dict())
+    new_borrow = await BorrowRepository.create_borrow(borrow.model_dump())
     return new_borrow
 
 

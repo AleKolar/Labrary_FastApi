@@ -32,8 +32,8 @@ class AuthorRepository:
             result = await session.execute(select(AuthorOrm).filter(
                 (data.first_name == AuthorOrm.first_name) &
                 (data.last_name == AuthorOrm.last_name) &
-                (data.birth_date == AuthorOrm.birth_date)
-            ))
+                (data.birth_date == AuthorOrm.birth_date)))
+
             author = result.scalars().first()
             return author
 
@@ -80,9 +80,7 @@ class BookRepository:
             data = book_data.model_dump()
             author_data = data['author']
 
-            existing_author = await cls.get_existing_author(session, {'first_name': author_data['first_name'],
-                                                                      'last_name': author_data['last_name'],
-                                                                      'birth_date': author_data['birth_date']})
+            existing_author = await cls.get_existing_author(session, AuthorOrm(**author_data))
 
             if existing_author:
                 author_id = existing_author.id
@@ -92,7 +90,7 @@ class BookRepository:
                 await session.flush()
                 author_id = new_author.id
 
-            query = await session.execute(select(BookOrm).filter(BookOrm.title == data['title']))
+            query = await session.execute(select(BookOrm).filter(BookOrm.title == book_data['title']))
             existing_book = query.scalars().first()
 
             if existing_book:
@@ -113,6 +111,12 @@ class BookRepository:
                 await session.commit()
 
                 return new_book
+
+    @classmethod
+    async def get_existing_author(cls, author_data):
+        async with new_session() as session:
+            author = await AuthorRepository.get_author_by_details(author_data)
+            return author
 
     ## А если использовать BookOrm
     # @classmethod
@@ -145,17 +149,21 @@ class BookRepository:
     #         return new_book
 
 
-    @classmethod
-    async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
-        query = select(AuthorOrm).filter(
-            (AuthorOrm.first_name == author_data.get('first_name')) &
-            (AuthorOrm.last_name == author_data.get('last_name')) &
-            (AuthorOrm.birth_date == author_data.get('birth_date'))
-        )
-        result = await session.execute(query)
-        author = result.scalars().first()
-        return author
+    # @classmethod
+    # async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
+    #     query = select(AuthorOrm).filter(
+    #         (AuthorOrm.first_name == author_data.get('first_name')) &
+    #         (AuthorOrm.last_name == author_data.get('last_name')) &
+    #         (AuthorOrm.birth_date == author_data.get('birth_date'))
+    #     )
+    #     result = await session.execute(query)
+    #     author = result.scalars().first()
+    #     return author
 
+    @classmethod
+    async def get_existing_author(cls, author_data):
+        author = await AuthorRepository.get_author_by_details(author_data)
+        return author
 
     @classmethod
     async def get_books(cls) -> List[BookOrm]:
@@ -220,7 +228,7 @@ class BorrowRepository:
         book_id = borrow_data.get("book_id")
 
         if not borrower_name or not author_id or not book_id:
-            raise ValueError("Не все обязательные поля были предоставлены для создания займа")
+            raise ValueError("Не все обязательные поля были предоставлены для создания borrow_data")
 
         async with new_session() as session:
             new_borrow = BorrowOrm(
