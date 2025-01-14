@@ -80,7 +80,7 @@ class BookRepository:
             data = book_data.model_dump()
             author_data = data['author']
 
-            existing_author = await cls.get_existing_author(session, AuthorOrm(**author_data))
+            existing_author = await cls.get_existing_author(AuthorOrm(**author_data))
 
             if existing_author:
                 author_id = existing_author.id
@@ -90,7 +90,9 @@ class BookRepository:
                 await session.flush()
                 author_id = new_author.id
 
-            query = await session.execute(select(BookOrm).filter(BookOrm.title == book_data['title']))
+            query = await session.execute(
+                select(BookOrm).filter(BookOrm.title == data['title'], BookOrm.author_id == author_id)
+            )
             existing_book = query.scalars().first()
 
             if existing_book:
