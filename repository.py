@@ -162,12 +162,32 @@ class BookRepository:
         return author
 
     @classmethod
-    async def get_books(cls) -> List[BookOrm]:
+    async def get_books(cls) -> List[SchemaBook]:
         async with new_session() as session:
-            query = select(BookOrm)
+            query = select(BookOrm).options(joinedload(BookOrm.author))
             result = await session.execute(query)
             books = result.scalars().all()
-            return books
+
+            schema_books = []
+            for book in books:
+                author_data = None
+                if book.author:
+                    author_data = {
+                        'id': book.author.id,
+                        'first_name': book.author.first_name,
+                        'last_name': book.author.last_name,
+                        'birth_date': book.author.birth_date.strftime('%Y-%m-%d') if book.author.birth_date else None
+                    }
+
+                schema_books.append(SchemaBook(
+                    id=book.id,
+                    title=book.title,
+                    description=book.description,
+                    available_copies=book.available_copies,
+                    author=SchemaAuthor(**author_data) if author_data else None
+                ))
+
+            return schema_books
 
     @classmethod
     async def get_book_by_id(cls, id: int) -> SchemaBook | dict[str, None]:
