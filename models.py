@@ -5,9 +5,9 @@ from datetime import date
 
 
 class Author(BaseModel):
-    first_name: str
-    last_name: str
-    birth_date: date
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    birth_date: Optional[date] = None
 
 class SchemaAuthor(Author):
     id: int
@@ -22,6 +22,7 @@ class Book(BaseModel):
 
 class SchemaBook(Book):
     id: int
+    author: Optional[SchemaAuthor] = None
     model_config = ConfigDict(from_attributes=True)
 
 

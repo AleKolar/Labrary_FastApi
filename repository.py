@@ -1,14 +1,13 @@
 
 from datetime import date
-from typing import List, Optional
+from typing import List, Dict, Any, Type
 
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from database import new_session, AuthorOrm, BookOrm, BorrowOrm
-
-from models import SchemaAuthor, Book, Author
-
-
+from models import SchemaAuthor, Book, Author, SchemaBook
+from utils import dict_to_json, json_to_dict
 
 class AuthorRepository:
     @classmethod
@@ -43,13 +42,14 @@ class AuthorRepository:
             query = select(AuthorOrm)
             result = await session.execute(query)
             authors = result.scalars().all()
-            return authors
+            return authors if authors else []
 
     @classmethod
-    async def get_author_by_id(cls, id: int) -> AuthorOrm:
+    async def get_author_by_id(cls, id: int) -> AuthorOrm | None:
         async with new_session() as session:
             author = await session.get(AuthorOrm, id)
-            return author
+            return author if author else None
+
 
     @classmethod
     async def update_author(cls, id: int, author_data: dict) -> AuthorOrm:
@@ -67,7 +67,7 @@ class AuthorRepository:
         async with new_session() as session:
             author_to_delete = await session.get(AuthorOrm, id)
             if author_to_delete:
-                session.delete(author_to_delete)
+                await session.delete(author_to_delete)
                 await session.commit()
                 return author_to_delete
             return None
@@ -113,12 +113,6 @@ class BookRepository:
                 await session.commit()
 
                 return new_book
-
-    @classmethod
-    async def get_existing_author(cls, author_data):
-        async with new_session() as session:
-            author = await AuthorRepository.get_author_by_details(author_data)
-            return author
 
     ## А если использовать BookOrm
     # @classmethod
@@ -176,10 +170,31 @@ class BookRepository:
             return books
 
     @classmethod
-    async def get_book_by_id(cls, id: int) -> BookOrm:
+    async def get_book_by_id(cls, id: int) -> SchemaBook | dict[str, None]:
         async with new_session() as session:
-            book = await session.get(BookOrm, id)
-            return book
+            query = select(BookOrm).where(BookOrm.id == id).options(joinedload(BookOrm.author))
+            book_orm = await session.execute(query)
+            book = book_orm.scalars().first()
+
+            if book:
+                author_data = None
+                if book.author:
+                    author_data = {
+                        'id': book.author.id,
+                        'first_name': book.author.first_name,
+                        'last_name': book.author.last_name,
+                        'birth_date': book.author.birth_date.strftime('%Y-%m-%d') if book.author.birth_date else None
+                    }
+
+                return SchemaBook(
+                    id=book.id,
+                    title=book.title,
+                    description=book.description,
+                    available_copies=book.available_copies,
+                    author=SchemaAuthor(**author_data) if author_data else None
+                )
+            else:
+                return None
 
     @classmethod
     async def update_book(cls, id: int, book_data: dict) -> BookOrm:
@@ -200,7 +215,7 @@ class BookRepository:
         async with new_session() as session:
             book_to_delete = await session.get(BookOrm, id)
             if book_to_delete:
-                session.delete(book_to_delete)
+                await session.delete(book_to_delete)
                 await session.commit()
                 return book_to_delete
             return None

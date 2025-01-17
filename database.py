@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from typing import Annotated
+from typing import Annotated, Optional
 
 from sqlalchemy import ForeignKey, func
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -17,14 +17,13 @@ new_session = async_sessionmaker(engine, expire_on_commit=False)
 class Model(DeclarativeBase):
    pass
 
-birth_date = Annotated[datetime, mapped_column(server_default=func.now())]
 
 class AuthorOrm(Model):
     __tablename__ = 'author'
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    first_name: Mapped[str]
-    last_name: Mapped[str]
-    birth_date: Mapped[datetime]
+    id: Mapped[int | None] = mapped_column(primary_key=True, autoincrement=True)
+    first_name: Mapped[str | None]
+    last_name: Mapped[str | None]
+    birth_date: Mapped[datetime | None]
 
     book: Mapped["Book"] = relationship("BookOrm", back_populates="author", lazy='joined')
     borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="author", foreign_keys="[BorrowOrm.author_id]", lazy='joined')
@@ -44,16 +43,16 @@ class BookOrm(Model):
     title: Mapped[str]
     description: Mapped[str | None]
     available_copies: Mapped[int]
-    author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
+    author_id: Mapped[Optional[int]] = mapped_column(ForeignKey('author.id'), nullable=True)
 
     borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="book", foreign_keys="[BorrowOrm.book_id]", lazy='joined')
-    author: Mapped["AuthorOrm"] = relationship("AuthorOrm", back_populates="book", lazy='joined')
+    author: Mapped[Optional["AuthorOrm"]] = relationship("AuthorOrm", back_populates="book", lazy='joined')
 
     def model_dump(self):
         return {
             'title': self.title,
             'description': self.description,
-            'author': self.author_id,
+            'author': self.author_id if self.author else None,
             'available_copies': self.available_copies,
         }
 
@@ -63,9 +62,9 @@ class BookOrm(Model):
             'description': self.description,
             'available_copies': self.available_copies,
             'author': {
-                'first_name': self.author.first_name,
-                'last_name': self.author.last_name,
-                'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author.birth_date else None
+                'first_name': self.author.first_name if self.author else None,
+                'last_name': self.author.last_name if self.author else None,
+                'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author and self.author.birth_date else None
             }
         }
 
