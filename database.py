@@ -56,7 +56,7 @@ class BookOrm(Model):
             'available_copies': self.available_copies,
         }
 
-    def dict(self):
+    def book_dict(self):
         return {
             'title': self.title,
             'description': self.description,

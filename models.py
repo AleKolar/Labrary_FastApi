@@ -28,6 +28,7 @@ class SchemaBook(Book):
 
 class Borrow(BaseModel):
     book_id: int
+    author_id: Optional[str] = None
     borrower_name: str
     borrow_date: date
     return_date: date

@@ -1,13 +1,13 @@
 
 from datetime import date
-from typing import List, Dict, Any, Type
+from typing import List
 
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from database import new_session, AuthorOrm, BookOrm, BorrowOrm
 from models import SchemaAuthor, Book, Author, SchemaBook
-from utils import dict_to_json, json_to_dict
+
 
 class AuthorRepository:
     @classmethod
@@ -220,15 +220,16 @@ class BookRepository:
     async def update_book(cls, id: int, book_data: dict) -> BookOrm:
         async with new_session() as session:
             stored_book = await session.get(BookOrm, id)
-
             if stored_book:
-                for key, value in book_data.items():
-                    setattr(stored_book, key, value)
+                stored_book.title = book_data.get('title', stored_book.title)
+                stored_book.description = book_data.get('description', stored_book.description)
+                stored_book.available_copies = book_data.get('available_copies', stored_book.available_copies)
+                stored_book.author_id = book_data.get('author_id', stored_book.author_id)
 
                 await session.commit()
-
                 return stored_book
             return None
+
 
     @classmethod
     async def delete_book(cls, id: int) -> BookOrm:
