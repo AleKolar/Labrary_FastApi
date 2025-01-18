@@ -5,7 +5,8 @@ from typing import List
 from fastapi import FastAPI, HTTPException
 from fastapi.params import Depends
 
-from database import create_tables, delete_tables, AuthorOrm, BookOrm
+
+from database import create_tables, delete_tables
 from models import Author, Book, Borrow, SchemaAuthor, SchemaBook
 from repository import AuthorRepository, BookRepository, BorrowRepository
 from test_database import book_data
@@ -87,28 +88,17 @@ async def get_book_by_id(id: int):
     return {"error": "Book not found"}
 
 
-@app.put("/books/{id}", response_model=Book)
-async def update_book(id: int, book: Book = Depends()):
-    existing_book = await BookRepository.get_book_by_id(id)
+@app.put("/books/{id}", response_model=Book, response_model_exclude={"id"})
+async def update_book(id: int, book: Book):
+    updated_book = await BookRepository().update_book(id, book.model_dump())
+    if updated_book:
+        author_data = book.model_dump().get('author')
+        if author_data and 'id' in author_data:
+            await BookRepository().add_author_to_book(updated_book, author_data)
+        return updated_book
+    else:
+        return {"error": "Book not found"}
 
-    if existing_book:
-        author_id = book.author.id if isinstance(book.author, SchemaAuthor) else None
-        # Получаем текущее значение available_copies
-        current_available_copies = existing_book.available_copies
-
-        # Обновляем только title, description и author_id, оставляя available_copies без изменений
-        book_data = {
-            'title': book.title,
-            'description': book.description,
-            'available_copies': current_available_copies,
-            'author_id': author_id
-        }
-
-        updated_book = await BookRepository.update_book(id, book_data)
-        if updated_book:
-            return updated_book.book_dict()
-
-    return {"error": "Book not found"}
 
 
 @app.delete("/books/{id}", response_model=SchemaBook)

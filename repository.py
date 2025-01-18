@@ -3,6 +3,7 @@ from datetime import date
 from typing import List
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from database import new_session, AuthorOrm, BookOrm, BorrowOrm
@@ -220,15 +221,28 @@ class BookRepository:
     async def update_book(cls, id: int, book_data: dict) -> BookOrm:
         async with new_session() as session:
             stored_book = await session.get(BookOrm, id)
-            if stored_book:
-                stored_book.title = book_data.get('title', stored_book.title)
-                stored_book.description = book_data.get('description', stored_book.description)
-                stored_book.available_copies = book_data.get('available_copies', stored_book.available_copies)
-                stored_book.author_id = book_data.get('author_id', stored_book.author_id)
 
+            if stored_book:
+                for key, value in book_data.items():
+                    if key == 'author':
+                        await cls.add_author_to_book(stored_book, value)
+                    else:
+                        setattr(stored_book, key, value)
                 await session.commit()
-                return stored_book
-            return None
+
+            return stored_book
+
+    @classmethod
+    async def add_author_to_book(cls, book: SchemaBook, author_data: dict):
+        if 'id' in author_data:
+            async with new_session() as session:
+                author = await session.get(SchemaAuthor, author_data['id'])
+
+                if not author:
+                    author = AuthorOrm(**author_data)
+                    session.add(author)
+
+                book.author = author
 
 
     @classmethod

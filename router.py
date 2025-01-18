@@ -63,7 +63,7 @@ async def get_book_by_id_route(id: int):
         return book
     return {"error": "Book not found"}
 
-@router.put("/books/{id}", response_model=SchemaBook)
+@router.put("/books/{id}", response_model=SchemaBook, response_model_exclude={"author"})
 async def update_book_route(id: int, book: Book):
     updated_book = await BookRepository.update_book(id, book)
     if updated_book:
