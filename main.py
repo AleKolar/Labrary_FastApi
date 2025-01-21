@@ -2,9 +2,9 @@ from contextlib import asynccontextmanager
 from datetime import date
 from typing import List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.params import Depends
-
+from sqlalchemy.orm import Session
 
 from database import create_tables, delete_tables
 from models import Author, Book, Borrow, SchemaAuthor, SchemaBook
@@ -88,16 +88,9 @@ async def get_book_by_id(id: int):
     return {"error": "Book not found"}
 
 
-@app.put("/books/{id}", response_model=Book, response_model_exclude={"id"})
-async def update_book(id: int, book: Book):
-    updated_book = await BookRepository().update_book(id, book.model_dump())
-    if updated_book:
-        author_data = book.model_dump().get('author')
-        if author_data and 'id' in author_data:
-            await BookRepository().add_author_to_book(updated_book, author_data)
-        return updated_book
-    else:
-        return {"error": "Book not found"}
+@app.put("/books/{id}", response_model=Book)
+async def update_book(id: int, book: Book, author_data: dict):
+    return await BookRepository().update_book(id, book, author_data)
 
 
 

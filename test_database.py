@@ -2,7 +2,7 @@ import pytest
 import asyncio
 import datetime
 from datetime import date
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 
 from sqlalchemy import select
 from datetime import datetime

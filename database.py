@@ -3,7 +3,7 @@ from typing import Annotated, Optional
 
 from sqlalchemy import ForeignKey, func
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.orm import Mapped, relationship, mapped_column, declarative_base, DeclarativeBase
+from sqlalchemy.orm import Mapped, relationship, mapped_column, declarative_base, DeclarativeBase, sessionmaker
 
 from config import settings
 from models import Author, Book, Borrow
@@ -56,17 +56,17 @@ class BookOrm(Model):
             'available_copies': self.available_copies,
         }
 
-    def book_dict(self):
-        return {
-            'title': self.title,
-            'description': self.description,
-            'available_copies': self.available_copies,
-            'author': {
-                'first_name': self.author.first_name if self.author else None,
-                'last_name': self.author.last_name if self.author else None,
-                'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author and self.author.birth_date else None
-            }
-        }
+    # def book_dict(self):
+    #     return {
+    #         'title': self.title,
+    #         'description': self.description,
+    #         'available_copies': self.available_copies,
+    #         'author': {
+    #             'first_name': self.author.first_name if self.author else None,
+    #             'last_name': self.author.last_name if self.author else None,
+    #             'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author and self.author.birth_date else None
+    #         }
+    #     }
 
 
 class BorrowOrm(Model):
@@ -96,7 +96,4 @@ async def create_tables():
 async def delete_tables():
     async with engine.begin() as connection:
         await connection.run_sync(Model.metadata.drop_all)
-
-
-
 

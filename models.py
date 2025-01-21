@@ -15,7 +15,7 @@ class SchemaAuthor(Author):
 
 class Book(BaseModel):
     title: str
-    author: Author
+    author: Optional[Author]
     description: Optional[str] = None
     available_copies: Optional[int] = None
 
@@ -36,3 +36,5 @@ class Borrow(BaseModel):
 class SchemaBarrow(Borrow):
    id: int
    model_config = ConfigDict(from_attributes=True)
+
+
