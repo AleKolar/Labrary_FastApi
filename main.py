@@ -25,7 +25,6 @@ app = FastAPI(lifespan=lifespan)
 
 
 # Эндпоинтs для авторов
-
 @app.post("/")
 async def create_author(author: Author = Depends()):
     author_repository = AuthorRepository()

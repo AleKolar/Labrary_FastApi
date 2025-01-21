@@ -114,47 +114,6 @@ class BookRepository:
 
                 return new_book
 
-    ## А если использовать BookOrm
-    # @classmethod
-    # async def create_book(cls, book_data: dict):
-    #     async with new_session() as session:
-    #         author_data = book_data.get('author')
-    #         author_id = None
-    #
-    #         if author_data:
-    #             existing_author = await session.execute(select(AuthorOrm).filter_by(**author_data))
-    #             existing_author = existing_author.scalar()
-    #
-    #             if existing_author:
-    #                 author_id = existing_author.id
-    #             else:
-    #                 new_author = AuthorOrm(**author_data)
-    #                 session.add(new_author)
-    #                 await session.flush()
-    #                 author_id = new_author.id
-    #
-    #         new_book = cls(title=book_data.get('title'),
-    #                        description=book_data.get('description'),
-    #                        available_copies=book_data.get('available_copies', 1),
-    #                        author_id=author_id)
-    #
-    #         session.add(new_book)
-    #         await session.flush()
-    #         await session.commit()
-    #
-    #         return new_book
-
-
-    # @classmethod
-    # async def get_existing_author(cls, session, author_data: dict) -> Optional[AuthorOrm]:
-    #     query = select(AuthorOrm).filter(
-    #         (AuthorOrm.first_name == author_data.get('first_name')) &
-    #         (AuthorOrm.last_name == author_data.get('last_name')) &
-    #         (AuthorOrm.birth_date == author_data.get('birth_date'))
-    #     )
-    #     result = await session.execute(query)
-    #     author = result.scalars().first()
-    #     return author
 
     @classmethod
     async def get_existing_author(cls, author_data):
@@ -216,54 +175,6 @@ class BookRepository:
             else:
                 return None
 
-    # async def update_book(self, id: int, book: Book):
-    #     async with new_session() as session:
-    #         stored_book = await session.get(BookOrm, id)
-    #         if stored_book:
-    #             # Обновление данных книги
-    #             for key, value in book.model_dump().items():
-    #                 if key not in ['author', 'available_copies']:
-    #                     setattr(stored_book, key, value)
-    #                     getattr(stored_book, 'available_copies')
-    #
-            #     # Обновление автора книги
-            #     if 'author' in book.model_dump():
-            #         author_data = book.model_dump()['author']
-            #
-            #         if 'author' in author_data:
-            #             author = await self.add_author_to_book(session, stored_book, author_data)
-            #             stored_book.author_id = author
-            #
-            #
-            #     await session.commit()
-            #     return stored_book
-            # return None
-
-    # @classmethod
-    # async def update_book(cls, id: int, book: Book) -> None:
-    #     async with new_session() as session:
-    #         stored_book = await session.get(BookOrm, id)
-    #         if stored_book:
-    #             # Обновление данных книги
-    #             for key, value in book.model_dump().items():
-    #                 if key not in ['author', 'available_copies']:
-    #                     setattr(stored_book, key, value)
-    #                     getattr(stored_book, 'available_copies')
-    #
-    #             # Обновление автора книги
-    #             author_id = await session.execute(select(BookOrm.author_id).filter(BookOrm.author_id == AuthorOrm.id))
-    #             author_id = author_id.scalars().first()
-    #             author = await session.get(AuthorOrm, author_id)
-    #             if author:
-    #                 author_attributes = vars(author)  # Получить все атрибуты объекта author
-    #                 for key, value in author_attributes.items():
-    #                     setattr(stored_book, key, value)
-    #
-    #                 stored_book.author_id = author.id
-    #
-    #                 await session.commit()
-    #                 return stored_book
-    #             return None
 
     @classmethod
     async def update_book(cls, id: int, book: Book, author_data: dict) -> Book:

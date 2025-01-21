@@ -35,8 +35,6 @@ class AuthorOrm(Model):
             'birth_date': self.birth_date.strftime('%Y-%m-%d') if self.birth_date else None
         }
 
-
-
 class BookOrm(Model):
     __tablename__ = 'book'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -55,19 +53,6 @@ class BookOrm(Model):
             'author': self.author_id if self.author else None,
             'available_copies': self.available_copies,
         }
-
-    # def book_dict(self):
-    #     return {
-    #         'title': self.title,
-    #         'description': self.description,
-    #         'available_copies': self.available_copies,
-    #         'author': {
-    #             'first_name': self.author.first_name if self.author else None,
-    #             'last_name': self.author.last_name if self.author else None,
-    #             'birth_date': self.author.birth_date.strftime('%Y-%m-%d') if self.author and self.author.birth_date else None
-    #         }
-    #     }
-
 
 class BorrowOrm(Model):
     __tablename__ = 'borrow'
