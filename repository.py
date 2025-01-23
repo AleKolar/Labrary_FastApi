@@ -176,36 +176,60 @@ class BookRepository:
                 return None
 
 
+    # @classmethod
+    # async def update_book(cls, id: int, book: Book) -> Book:
+    #     async with new_session() as session:
+    #         stored_book = await session.get(BookOrm, id)
+    #         if stored_book:
+    #             # Обновление данных книги
+    #             for key, value in book.model_dump().items():
+    #                 if key not in ['author', 'available_copies']:
+    #                     setattr(stored_book, key, value)
+    #                     getattr(stored_book, 'available_copies')
+    #
+    #             # Проверяем наличие информации об авторе в книге
+    #             if 'author' not in book.model_dump():
+    #                 # Создаем нового автора на основе данных из словаря author_data
+    #                 model = Author.model_dump(book.author)
+    #                 new_author = AuthorOrm(**model)
+    #                 session.add(new_author)
+    #                 await session.commit()
+    #
+    #                 # Привязываем нового автора к книге
+    #                 stored_book.author = new_author
+    #             else:
+    #                 # Обновляем автора книги, если он существует
+    #                 author_id = book.model_dump().get('author')
+    #                 if author_id:
+    #                     author = await session.get(AuthorOrm, id)
+    #                     if author:
+    #                         stored_book.author = author
+    #
+    #             await session.commit()
+    #
+    #             return stored_book
+
     @classmethod
-    async def update_book(cls, id: int, book: Book, author_data: dict) -> Book:
+    async def update_book(cls, book_id: int, book_data: dict):
         async with new_session() as session:
-            stored_book = await session.get(BookOrm, id)
+            stored_book = await session.get(BookOrm, book_id)
             if stored_book:
-                # Обновление данных книги
-                for key, value in book.model_dump().items():
+                for key, value in book_data.items():
                     if key not in ['author', 'available_copies']:
                         setattr(stored_book, key, value)
+                if 'author' in book_data:
+                    author_data = book_data['author']
 
-                # Проверяем наличие информации об авторе в книге
-                if 'author' not in book.model_dump():
-                    # Создаем нового автора на основе данных из словаря author_data
-                    new_author = AuthorOrm(**author_data)
-                    session.add(new_author)
-                    await session.commit()
+                    if author_data:
+                        new_author = AuthorOrm(**author_data)
+                        session.add(new_author)
+                        await session.flush()
 
-                    # Привязываем нового автора к книге
-                    stored_book.author = new_author
-                else:
-                    # Обновляем автора книги, если он существует
-                    author_id = book.model_dump().get('author')
-                    if author_id:
-                        author = await session.get(AuthorOrm, id)
-                        if author:
-                            stored_book.author = author
+                        stored_book.author = new_author
 
                 await session.commit()
-
                 return stored_book
+            return None
 
     # @classmethod
     # async def add_author_to_book(self, session, book: BookOrm, author_data: dict):

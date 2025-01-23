@@ -5,8 +5,9 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.params import Depends
 from sqlalchemy.orm import Session
+from sqlalchemy.testing import exclude
 
-from database import create_tables, delete_tables
+from database import create_tables, delete_tables, BookOrm
 from models import Author, Book, Borrow, SchemaAuthor, SchemaBook
 from repository import AuthorRepository, BookRepository, BorrowRepository
 from test_database import book_data
@@ -87,9 +88,14 @@ async def get_book_by_id(id: int):
     return {"error": "Book not found"}
 
 
-@app.put("/books/{id}", response_model=Book)
-async def update_book(id: int, book: Book, author_data: dict):
-    return await BookRepository().update_book(id, book, author_data)
+
+@app.put("/books/{id}", response_model=SchemaBook)
+async def update_book(book_id: int, book: Book = Depends()):
+    book_data = book.model_dump()
+    updated_book = await BookRepository.update_book(book_id, book_data)
+    if updated_book:
+        return updated_book
+    return {"error": "Book not found"}
 
 
 
