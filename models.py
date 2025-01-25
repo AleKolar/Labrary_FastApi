@@ -41,7 +41,7 @@ class Borrow(BaseModel):
     book_id: int
     author_id: Optional[int] = None
     borrower_name: str
-    borrow_date: Optional[date] = None
+    borrow_date: date
     return_date: Optional[date] = None
 
 class SchemaBarrow(Borrow):
