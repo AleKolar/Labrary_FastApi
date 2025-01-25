@@ -60,8 +60,8 @@ class BorrowOrm(Model):
     book_id: Mapped[int] = mapped_column(ForeignKey('book.id'))
     author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
     borrower_name: Mapped[str]
-    borrow_date: Mapped[date]
-    return_date: Mapped[date]
+    borrow_date: Mapped[datetime | None]
+    return_date: Mapped[datetime | None]
 
     book: Mapped["BookOrm"] = relationship("BookOrm", back_populates="borrows", lazy='joined')
     author: Mapped["AuthorOrm"] = relationship("AuthorOrm", back_populates="borrows", lazy='joined')
