@@ -1,5 +1,5 @@
 
-from datetime import date
+from datetime import date, datetime
 from typing import List
 
 from sqlalchemy import select
@@ -239,34 +239,35 @@ class BookRepository:
         async with new_session() as session:
             stored_book = await session.get(BookOrm, book_id)
             if stored_book:
-                # Обновляем поля книги, кроме author и available_copies
-                for key, value in book_data.items():
-                    if key == 'author':
-                        continue  # Пропускаем поле author, обрабатываем отдельно
 
-                    setattr(stored_book, key, value)  # Обновляем другие поля
+                for key, value in book_data.items():
+                    if key not in ['author', 'available_copies']:
+                        setattr(stored_book, key, value)
 
                 if 'author' in book_data:
                     author_data = book_data['author']
                     if author_data:
+                        # Проверяем, существует ли автор
                         existing_author = await session.get(AuthorOrm, author_data.get('id'))
                         if existing_author:
                             # Обновляем существующего автора
                             for attr, attr_value in author_data.items():
                                 setattr(existing_author, attr, attr_value)
-                            stored_book.author = existing_author
                         else:
-                            # Создаем нового автора, если он не найден
+                            # Создаем нового автора, если не найден
                             new_author = AuthorOrm(**author_data)
                             session.add(new_author)
                             stored_book.author = new_author
-
-                            # Обработка поля available_copies отдельно
                 if 'available_copies' in book_data:
-                    stored_book.available_copies = book_data['available_copies']  # Обновляем значение, если передано
+                    # Если значение передано, обновляем его
+                    stored_book.available_copies = book_data['available_copies']
+                else:
+                    # Если значение не передано, используем текущее значение
+                    stored_book.available_copies = stored_book.available_copies
 
                 await session.commit()
                 return stored_book
+
             return None
 
 
@@ -289,6 +290,11 @@ class BookRepository:
                 if book.available_copies > 0:
                     book.available_copies -= 1
                     await session.commit()
+                    return True
+                else:
+                    raise ValueError("Все копии книги 'на руках'.")
+            else:
+                raise ValueError("Книга не найдена.")
 
     @classmethod
     async def return_book(cls, book_id: int):
@@ -302,19 +308,30 @@ class BorrowRepository:
     @classmethod
     async def create_borrow(cls, borrow_data: dict) -> BorrowOrm:
         borrower_name = borrow_data.get("borrower_name")
-        author_id = borrow_data.get("author_id")
         book_id = borrow_data.get("book_id")
+        borrow_date = borrow_data.get("borrow_date")
 
-        if not borrower_name or not author_id or not book_id:
+        if not borrower_name or not book_id or not borrow_date:
             raise ValueError("Не все обязательные поля были предоставлены для создания borrow_data")
+
+            # Проверяем тип borrow_date
+        if isinstance(borrow_date, str):
+            try:
+                # Преобразуем строку в объект date
+                borrow_date = datetime.strptime(borrow_date, '%Y-%m-%d').date()
+            except ValueError:
+                raise ValueError("Неверный формат даты. Ожидается формат YYYY-MM-DD.")
+        elif not isinstance(borrow_date, (datetime, date)):
+            raise ValueError("borrow_date должен быть строкой или объектом datetime.")
 
         async with new_session() as session:
             new_borrow = BorrowOrm(
                 borrower_name=borrower_name,
-                author_id=author_id,
-                book_id=book_id
+                book_id=book_id,
+                borrow_date=borrow_date
             )
             session.add(new_borrow)
+            await BookRepository.borrow_book(book_id)
             await session.commit()
             return new_borrow
 
@@ -333,13 +350,26 @@ class BorrowRepository:
             return borrow
 
     @classmethod
-    async def return_borrow(cls, id: int, return_date: date) -> BorrowOrm:
+    async def return_borrow(cls, borrow_id: int, return_date_str: str) -> BorrowOrm:
         async with new_session() as session:
-            borrow_to_return = await session.get(BorrowOrm, id)
+            # Получаем запись о займе
+            borrow_to_return = await session.get(BorrowOrm, borrow_id)
             if borrow_to_return:
+                # Преобразуем строку в объект date
+                try:
+                    return_date = datetime.strptime(return_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    raise ValueError("Неверный формат даты. Ожидается формат YYYY-MM-DD.")
+
+                    # Устанавливаем дату возврата
                 borrow_to_return.return_date = return_date
-                await session.commit()
+
+                # Возвращаем книгу
+                await BookRepository.return_book(borrow_to_return.book_id)
+
+                await session.commit()  # Сохраняем изменения
                 return borrow_to_return
+
             return None
 
 

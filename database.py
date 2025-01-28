@@ -26,7 +26,7 @@ class AuthorOrm(Model):
     birth_date: Mapped[datetime | None]
 
     book: Mapped["Book"] = relationship("BookOrm", back_populates="author", lazy='joined')
-    borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="author", foreign_keys="[BorrowOrm.author_id]", lazy='joined')
+    # borrows: Mapped["Borrow"] = relationship("BorrowOrm", back_populates="author", foreign_keys="[BorrowOrm.author_id]", lazy='joined')
 
     def model_dump(self):
         return {
@@ -58,20 +58,19 @@ class BorrowOrm(Model):
     __tablename__ = 'borrow'
     id: Mapped[int] = mapped_column(primary_key=True)
     book_id: Mapped[int] = mapped_column(ForeignKey('book.id'))
-    author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
+    # author_id: Mapped[int] = mapped_column(ForeignKey('author.id'))
     borrower_name: Mapped[str]
     borrow_date: Mapped[datetime | None]
     return_date: Mapped[datetime | None]
 
     book: Mapped["BookOrm"] = relationship("BookOrm", back_populates="borrows", lazy='joined')
-    author: Mapped["AuthorOrm"] = relationship("AuthorOrm", back_populates="borrows", lazy='joined')
+    # author: Mapped["AuthorOrm"] = relationship("AuthorOrm", back_populates="borrows", lazy='joined')
 
     def model_dump(self):
         return {
             'book_id': self.book_id,
             'borrower_name': self.borrower_name,
             'borrow_date': self.borrow_date,
-            'return_date': self.return_date,
         }
 
 async def create_tables():

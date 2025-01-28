@@ -24,28 +24,17 @@ class SchemaBook(Book):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
-    def dict(self, **kwargs):
-        data = super(SchemaBook, self).model_dump(**kwargs)
-
-        if data.get('author'):
-            author_data = data['author']
-            data['first_name'] = author_data.get('first_name')
-            data['last_name'] = author_data.get('last_name')
-            data['birth_date'] = author_data.get('birth_date')
-            del data['author']
-
-        return data
-
 
 class Borrow(BaseModel):
     book_id: int
-    author_id: Optional[int] = None
     borrower_name: str
     borrow_date: date
-    return_date: Optional[date] = None
+
 
 class SchemaBarrow(Borrow):
    id: int
+   return_date: Optional[date] = None
    model_config = ConfigDict(from_attributes=True)
+
 
 
